@@ -5,8 +5,7 @@ from .models import Surl, Domain
 
 class SurlAdmin(admin.ModelAdmin):
     search_fields = ['alias','url','note']
-    list_filter = ('domain','owner')
-    list_display = ('alias','domain','url','note','owner')
+    list_display = ('alias','domain','short_url','url','note','owner')
     
 admin.site.register(Surl, SurlAdmin)
 
