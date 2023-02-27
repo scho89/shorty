@@ -16,7 +16,7 @@ class Surl(models.Model):
     note = models.CharField(max_length=2048,blank=True)
     domain = models.ForeignKey(Domain, on_delete=models.CASCADE)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    short_url = models.URLField(max_length=128)
+    short_url = models.URLField(max_length=128,unique=True)
     
     def save(self, *args, **kwargs):
         self.short_url = str(self.domain)+"/"+(self.alias)

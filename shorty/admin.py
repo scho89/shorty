@@ -4,13 +4,13 @@ from .models import Surl, Domain
 # Register your models here.
 
 class SurlAdmin(admin.ModelAdmin):
-    search_fields = ['alias','url','note']
+    search_fields = ['alias','url','note','domain__name','owner__username']
     list_display = ('alias','domain','short_url','url','note','owner')
     
 admin.site.register(Surl, SurlAdmin)
 
 class DomainAdmin(admin.ModelAdmin):
-    search_fields = ['name']
+    search_fields = ['name','owner__username']
     list_display = ['name','owner']
     
 admin.site.register(Domain, DomainAdmin)
