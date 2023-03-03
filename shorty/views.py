@@ -7,15 +7,16 @@ from shorty.models import Surl
 
 
 def index(request):
+    return redirect('common:url')
     
-    # if request.method == "GET":
-    if request.user.is_authenticated:
-        surls = Surl.objects.filter(owner__username=request.user.username)
-        print(surls)
-        return HttpResponse(f"Hello, {request.user.username}")    
+    # # if request.method == "GET":
+    # if request.user.is_authenticated:
+    #     surls = Surl.objects.filter(owner__username=request.user.username)
+    #     context = {'surls':surls}
+    #     return render(request,'shorty/index.html',context=context)    
 
-    else:
-        return HttpResponse('Hello, AnonymousUser')
+    # else:
+    #     return render(request,'shorty/index.html')    
 
 def surl(request,alias):
     domain=(request.get_host()).split(':')[0]
@@ -31,6 +32,3 @@ def surl(request,alias):
         return redirect(surl.url)
     
     return HttpResponse(f"{domain}/{alias} is not exists")
-
-def _admin(request):
-    return HttpResponse('Admin page')

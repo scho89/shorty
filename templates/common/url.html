@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container">
+    <h5 class="my-3 border-bottom pb-2">URL 등록</h5>
+    <form method="post" action="{% url 'common:url_create'%}">
+        {% csrf_token %}
+
+    <div class="mb-3">
+        <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="domain" name="domain" data-bs-toggle="dropdown" aria-expanded="false">
+              Dropdown button
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="domain">
+                {% for domain in domains %}
+                    {% if domain.is_verified %}
+                      <li><a class="dropdown-item" href="#">{{ domain.name }}</a></li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+          </div>
+    </div>
+    <div class="mb-3">
+        <label for="alias" class="form-label">Alias</label> 
+        <input type="text" class="form-control" name="alias" id="alias">
+    </div>
+
+        <button class="btn btn-primary" type="submit">저장하기</button>
+    </form>
+</div>
+
+
+
+<div class="container my-3">
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Short URL</th>
+            <th scope="col">URL</th>
+            <th scope="col">Note</th>
+            <th scope="col">Action</th>
+          </tr>
+    </thead>
+    <tbody>
+    {% for surl in surls %}
+    <tr>
+    <td>{{ surl.short_url }}</td>
+    <td>{{ surl.url }}</td>
+    <td>{{ surl.note }}</td>
+    <td>Action</td>
+    </tr>
+    {% endfor %}
+</tbody>
+</table>
+</div>
+
+{% endblock %}

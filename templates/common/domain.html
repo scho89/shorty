@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container my-3">
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Stauts</th>
+            <th scope="col">Action</th>
+          </tr>
+    </thead>
+    <tbody>
+    {% for domain in domains %}
+    <tr>
+    <td>{{ domain.name }}</td>
+    <td>{{ domain.status }}</td>
+    <td>Action</td>
+    </tr>
+    {% endfor %}
+</tbody>
+</table>
+</div>
+
+{% endblock %}
