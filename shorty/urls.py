@@ -1,10 +1,8 @@
 from . import views
 from django.urls import path
 
-
+app_name = 'shorty'
 
 urlpatterns = [
-    path('_admin/', views._admin),
     path('<str:alias>/', views.surl),
-    path('', views.index),
 ]
