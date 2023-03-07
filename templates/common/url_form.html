@@ -1,0 +1,62 @@
+<div class="container">
+    <h5 class="my-3 border-bottom pb-2">URL 등록</h5>
+    <form method="post" action="{% url 'common:url_create'%}">
+        {% csrf_token %}
+
+        <!-- 오류 표시 -->
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+        {% for field in form %}
+            {% if field.errors %}
+                <div>
+                    <strong> {{ field.label }} </strong>
+                    {{ field.errors }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if e %}
+        <div class="alert alert-danger" role="alert">
+            <div class="mb-1">
+                <strong> {{ e.messages.0 }} </strong>
+           </div>
+        </div>
+    {% endif %}
+    <!-- 오류 표시 End-->
+
+
+    <div class="mb-3">
+        <label for="alias" class="form-label">Domain</label> 
+          <select class="form-select" aria-label="Domain selection" name="domain" id="domain">
+                <option>Select domain</option>
+
+            {% for domain in domains %}
+                {% if domain.is_verified %}
+                    {% if form.domain.value == domain.name %}
+                        <option value="{{ domain.name }}" selected>{{ domain.name }}</option>
+                    {% else %}
+                        <option value="{{ domain.name }}">{{ domain.name }}</option>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+          </select>
+
+    </div>
+    <div class="mb-3">
+        <label for="alias" class="form-label">Alias</label> 
+        <input type="text" class="form-control" name="alias" id="alias" value="{{ form.alias.value|default_if_none:'' }}">
+    </div>
+    <div class="mb-3">
+        <label for="alias" class="form-label">URL</label> 
+        <input type="text" class="form-control" name="url" id="url" value="{{ form.url.value|default_if_none:'' }}">
+    </div>
+    <div class="mb-3">
+        <label for="note" class="form-label">Note</label> 
+        <input type="text" class="form-control" name="note" id="note" value="{{ form.note.value|default_if_none:'' }}">
+    </div>
+
+        <button class="btn btn-primary" type="submit">저장하기</button>
+    </form>
+</div>

@@ -11,5 +11,6 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),
     path('domain/', views.domain, name='domain'),
     path('url/', views.url, name='url'),
-    path('url/create/', views.url_create, name='url_create')    
+    path('url/create/', views.url_create, name='url_create'),
+    path('url/delete/<int:pk>', views.url_delete, name='url_delete')    
 ]
