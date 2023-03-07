@@ -9,8 +9,11 @@ urlpatterns = [
     # path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('signup/', views.signup, name='signup'),
-    path('domain/', views.domain, name='domain'),
+    path('domain/', views.domain_list, name='domain_list'),
     path('url/', views.url, name='url'),
     path('url/create/', views.url_create, name='url_create'),
-    path('url/delete/<int:pk>', views.url_delete, name='url_delete')    
+    path('url/delete/<int:pk>', views.url_delete, name='url_delete'),
+    path('domain/create', views.domain_create, name='domain_create'),
+    path('domain/delete/<int:pk>', views.domain_delete, name='domain_delete'),
+    path('domain/verify/<int:pk>', views.domain_verify, name='domain_verify'),   
 ]

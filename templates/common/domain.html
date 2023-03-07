@@ -1,12 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
+{% include "common/domain_form.html" %}
 
 <div class="container my-3">
 <table class="table table-hover">
     <thead>
         <tr>
             <th scope="col">Name</th>
+            <th scope="col"></th>
             <th scope="col">Stauts</th>
             <th scope="col">Action</th>
           </tr>
@@ -14,9 +16,35 @@
     <tbody>
     {% for domain in domains %}
     <tr>
-    <td>{{ domain.name }}</td>
-    <td>{{ domain.status }}</td>
-    <td>Action</td>
+    <td><p class="text-body">{{ domain.name }}</p></td>
+    
+    <td>
+        {% if not domain.is_verified %}
+        <div class="spinner-border text-warning float-end spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+
+    {% endif %}
+    </td>
+
+    <td>
+        {% if domain.is_verified %}
+        <p class="text-success">Verified</p>
+        {% else %}
+        <p class="text-danger">{{ domain.dns_txt }}</p>
+        {% endif %}
+    </td>
+    <td>        
+        <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+            {% if domain.is_verified %}
+            {% else %}
+            <a class="btn btn-warning btn-sm" href="{% url 'common:domain_verify' pk=domain.pk %}">Verify</a>
+            {% endif %}            
+            <a class="btn btn-danger btn-sm" href="{% url 'common:domain_delete' pk=domain.pk %}">Delete</a>
+            
+        </div>
+    </td>
+
     </tr>
     {% endfor %}
 </tbody>

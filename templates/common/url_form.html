@@ -26,21 +26,19 @@
     {% endif %}
     <!-- 오류 표시 End-->
 
-
     <div class="mb-3">
         <label for="alias" class="form-label">Domain</label> 
           <select class="form-select" aria-label="Domain selection" name="domain" id="domain">
                 <option>Select domain</option>
-
-            {% for domain in domains %}
-                {% if domain.is_verified %}
-                    {% if form.domain.value == domain.name %}
-                        <option value="{{ domain.name }}" selected>{{ domain.name }}</option>
-                    {% else %}
-                        <option value="{{ domain.name }}">{{ domain.name }}</option>
+                {% for domain in domains %}
+                    {% if domain.is_verified %}
+                        {% if form.domain.value|add:"0" == domain.id %}
+                            <option value="{{ domain.id }}" selected>{{ domain.name }}</option>
+                        {% else %}
+                            <option value="{{ domain.id }}">{{ domain.name }}</option>
+                        {% endif %}
                     {% endif %}
-                {% endif %}
-            {% endfor %}
+                {% endfor %}
           </select>
 
     </div>

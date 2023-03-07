@@ -1,19 +1,46 @@
+from datetime import timedelta
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.utils.crypto import get_random_string
-from dns.resolver import resolve
+from dns.resolver import resolve,NoAnswer
 
 # Create your models here.
 
 class Domain(models.Model):
-    name = models.CharField(max_length=64,unique=True, primary_key=True)
+    name = models.CharField(max_length=64)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     is_verified = models.BooleanField(default=False)
+    dns_txt = models.CharField(max_length=50,null=True,blank=True)
+    last_ownership_check = models.DateTimeField(null=True,blank=True)
+
+    VERIFY_INTERVAL = 5
 
     def __str__(self):
         return self.name
     
-        
+    def create_dns_txt(self):
+        return "shorty-"+get_random_string(length=30)
+    
+    def verify_ownership(self):
+        # code 0: confirmed
+        # code 1: retry after 5 minutes
+        # code 2: not verified
+        if (not self.last_ownership_check) or self.last_ownership_check - timezone.now() < timedelta(seconds=self.VERIFY_INTERVAL):
+            try: 
+                answers = resolve(self.name,'TXT')
+            except NoAnswer:
+                return 2
+                
+            for answer in answers:
+                if self.dns_txt in answer.to_text():
+                    return 0
+            return 2
+        return 1    
+    
+    # def save(self, *args, **kwargs):
+    #     self.short_url = str(self.domain)+"/"+(self.alias)
+    #     super().save(*args, **kwargs)
 
 class Surl(models.Model):
     alias = models.CharField(max_length=128)

@@ -12,3 +12,13 @@ class SurlForm(forms.ModelForm):
             'url': 'Origianl URL',
             'note': 'Note',
         }
+
+
+class DomainForm(forms.ModelForm):
+    class Meta:
+        model = Domain
+        fields = ['name']
+
+        labels = {
+            'name':'Name'
+        }

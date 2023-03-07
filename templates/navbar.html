@@ -15,7 +15,7 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'common:domain' %}"> Domains</a>
+                    <a class="nav-link" href="{% url 'common:domain_list' %}"> Domains</a>
                 </li>
                 <li class="nav-item">
                         <a class="nav-link" href="{% url 'common:logout' %}"> {{ user.username }} (로그아웃)</a>

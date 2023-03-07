@@ -1,0 +1,44 @@
+<div class="container">
+    <h5 class="my-3 border-bottom pb-2">Domain 등록</h5>
+    <form method="post" action="{% url 'common:domain_create'%}">
+        {% csrf_token %}
+
+        <!-- 오류 표시 -->
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+        {% for field in form %}
+            {% if field.errors %}
+                <div>
+                    <strong> {{ field.label }} </strong>
+                    {{ field.errors }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if e %}
+        <div class="alert alert-danger" role="alert">
+            <div class="mb-1">
+                <strong> {{ e.messages.0 }} </strong>
+           </div>
+        </div>
+    {% endif %}
+
+    {% if err %}
+        <div class="alert alert-danger" role="alert">
+            <div class="mb-1">
+                <strong> {{ err }} </strong>
+           </div>
+        </div>
+    {% endif %}
+
+    <!-- 오류 표시 End-->
+
+    <div class="mb-3">
+        <label for="alias" class="form-label">Domain</label> 
+        <input type="text" class="form-control" name="name" id="name" value="{{ form.domain.value|default_if_none:'' }}">
+    </div>
+        <button class="btn btn-primary" type="submit">저장하기</button>
+    </form>
+</div>
