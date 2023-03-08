@@ -22,3 +22,5 @@ urlpatterns = [
     path('_common_/', include('common.urls')),
     path('', include('shorty.urls')),
 ]
+
+handler404 = 'common.views.page_not_found'
