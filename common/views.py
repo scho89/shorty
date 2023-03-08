@@ -191,7 +191,9 @@ def domain_delete(request, pk):
     
     else:
         return HttpResponse("login required")
-    
+
+def page_not_found(request, exception):
+    return render(request, 'common/404.html', {})
 
 
 class Serr:

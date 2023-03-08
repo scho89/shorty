@@ -17,3 +17,5 @@ urlpatterns = [
     path('domain/delete/<int:pk>', views.domain_delete, name='domain_delete'),
     path('domain/verify/<int:pk>', views.domain_verify, name='domain_verify'),   
 ]
+
+handler404 = 'common.views.page_not_found'
