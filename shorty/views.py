@@ -31,4 +31,4 @@ def surl(request,alias):
     if surl:
         return redirect(surl.url)
     
-    return HttpResponse(f"{domain}/{alias} is not exists")
+    return redirect('common:url')
