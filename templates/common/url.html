@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% include "common/url_form.html" %}
+
+<div class="container my-3">
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Short URL</th>
+            <th scope="col">URL</th>
+            <th scope="col">Note</th>
+            <th scope="col">Action</th>
+          </tr>
+    </thead>
+    <tbody>
+    {% for surl in surls %}
+    <tr>
+    <td>{{ surl.short_url }}</td>
+    <td><a href="{{ surl.url }}" class="link-secondary">{{ surl.url }}</a></td>
+    <td>{{ surl.note }}</td>
+    <td>
+        <a class="btn btn-danger btn-sm" href="{% url 'common:url_delete' pk=surl.id %}">삭제</a>
+    </td>
+    </tr>
+    {% endfor %}
+</tbody>
+</table>
+</div>
+
+
+
+
+{% endblock %}
+{% block script %}
+<script type="text/javascript">
+    const page_elements = document.getElementsByClassName("page-link");
+    Array.from(page_elements).forEach(function(element) {
+        element.addEventListener("click", function(){
+        document.getElementById("page").value = this.dataset.page;
+        document.getElementById("searchForm").submit();
+        });
+    });
+
+    const btn_search = document.getElementById("btn_search");
+    btn_search.addEventListener("click", function() {
+        document.getElementById('kw').value = document.getElementById("search_kw").value;
+        document.getElementById("page").value = 1;
+        document.getElementById("searchForm").submit();
+    });
+
+    const inputbox_search_kw = document.getElementById("search_kw");
+    inputbox_search_kw.addEventListener("keypress", function(e) {
+        if(e.keyCode == 13){
+            document.getElementById('kw').value = document.getElementById("search_kw").value;
+            document.getElementById("page").value = 1;
+            document.getElementById("searchForm").submit();
+            }
+    });
+
+</script>
+{% endblock %}

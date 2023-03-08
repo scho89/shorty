@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% include "common/domain_form.html" %}
+
+<div class="container my-3">
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col"></th>
+            <th scope="col">Stauts</th>
+            <th scope="col">Action</th>
+          </tr>
+    </thead>
+    <tbody>
+    {% for domain in domains %}
+    <tr>
+    <td><p class="text-body">{{ domain.name }}</p></td>
+    
+    <td>
+        {% if not domain.is_verified %}
+        <div class="spinner-border text-warning float-end spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+
+    {% endif %}
+    </td>
+
+    <td>
+        {% if domain.is_verified %}
+        <p class="text-success">Verified</p>
+        {% else %}
+        <p class="text-danger">{{ domain.dns_txt }}</p>
+        {% endif %}
+    </td>
+    <td>        
+        <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+            {% if domain.is_verified %}
+            {% else %}
+            <a class="btn btn-warning btn-sm" href="{% url 'common:domain_verify' pk=domain.pk %}">Verify</a>
+            {% endif %}
+
+            {% comment %}            
+            <a class="btn btn-danger btn-sm" href="{% url 'common:domain_delete' pk=domain.pk %}">Delete</a>
+            {% endcomment %} 
+            
+            <!-- Button trigger modal -->
+            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#staticBackdrop" data-bs-delete-url="{% url 'common:domain_delete' pk=domain.pk %}" data-bs-domain-name="{{ domain.name }}">
+                Delete
+            </button>
+
+        </div>
+    </td>
+
+    </tr>
+    {% endfor %}
+</tbody>
+</table>
+</div>
+
+
+        <!-- Modal -->
+        <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p></p>
+                </div>
+                <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a class="btn btn-danger">Delete</a>
+                </div>
+            </div>
+            </div>
+        </div>
+
+<!-- modal script -->
+
+
+{% endblock %}
+
+{% block script %}
+
+<script type="text/javascript">
+    var staticBackdrop = document.getElementById('staticBackdrop')
+    staticBackdrop.addEventListener('show.bs.modal', function (event) {
+      // Button that triggered the modal
+      var button = event.relatedTarget
+      // Extract info from data-bs-* attributes
+      var domain_delete_url = button.getAttribute('data-bs-delete-url')
+      var domain_name = button.getAttribute('data-bs-domain-name')
+      // If necessary, you could initiate an AJAX request here
+      // and then do the updating in a callback.
+      //
+      // Update the modal's content.
+      var modalTitle = staticBackdrop.querySelector('.modal-title')
+      var modalBody = staticBackdrop.querySelector('.modal-body p')
+      var modalDeleteBtn = staticBackdrop.querySelector('.btn.btn-danger')
+    
+      modalTitle.textContent = 'Deleting ' + domain_name
+      modalBody.textContent = '정말로 '+ domain_name +'을 삭제하시겠습니까? 해당 도메인과 연결된 모든 URL이 함께 삭제됩니다.'
+      modalDeleteBtn.setAttribute('href',domain_delete_url)
+    })
+    </script>
+{% endblock %}

@@ -1,0 +1,58 @@
+<div class="container my-3">
+    <h5 class="my-3 border-bottom pb-2">URL 등록</h5>
+    <form method="post" action="{% url 'common:url_create'%}">
+            {% csrf_token %}
+
+            <!-- 오류 표시 -->
+            {% if form.errors %}
+            <div class="alert alert-danger" role="alert">
+            {% for field in form %}
+                {% if field.errors %}
+                    <div>
+                        <strong> {{ field.label }} </strong>
+                        {{ field.errors }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if e %}
+            <div class="alert alert-danger" role="alert">
+                <div class="mb-1">
+                    <strong> {{ e.messages.0 }} </strong>
+            </div>
+            </div>
+        {% endif %}
+    <!-- 오류 표시 End-->
+    
+            <div class="input-group mb-3 w-75">
+                <select class="form-select" aria-label="Domain selection" name="domain" id="domain">
+                        <option>Select domain</option>
+                        {% for domain in domains %}
+                            {% if domain.is_verified %}
+                                {% if form.domain.value|add:"0" == domain.id %}
+                                    <option value="{{ domain.id }}" selected>{{ domain.name }}</option>
+                                {% else %}
+                                    <option value="{{ domain.id }}">{{ domain.name }}</option>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                </select>
+                <span class="input-group-text">/</span>
+                <input type="text" class="form-control" name="alias" id="alias" value="{{ form.alias.value|default_if_none:'' }}" placeholder="alias">
+            </div>
+            <div class="input-group mb-3 w-75">
+
+                <input type="text" class="form-control" name="url" id="url" value="{{ form.url.value|default_if_none:'' }}" placeholder="URL">
+            </div>
+            <div class="input-group mb-3 w-75">
+
+                <input type="text" class="form-control" name="note" id="note" value="{{ form.note.value|default_if_none:'' }}" placeholder="Note">
+
+            </div>
+
+            <button class="btn btn-primary" type="submit">저장하기</button>
+        </form>
+</div>
+
