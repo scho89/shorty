@@ -35,9 +35,8 @@
 
     <!-- 오류 표시 End-->
 
-    <div class="mb-3">
-        <label for="alias" class="form-label">Domain</label> 
-        <input type="text" class="form-control" name="name" id="name" value="{{ form.domain.value|default_if_none:'' }}">
+    <div class="input-group mb-3 w-50">
+        <input type="text" class="form-control" name="name" id="name" value="{{ form.domain.value|default_if_none:'' }}" placeholder="example.com">
     </div>
         <button class="btn btn-primary" type="submit">저장하기</button>
     </form>

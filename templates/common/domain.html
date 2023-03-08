@@ -81,6 +81,11 @@
 
 <!-- modal script -->
 
+
+{% endblock %}
+
+{% block script %}
+
 <script type="text/javascript">
     var staticBackdrop = document.getElementById('staticBackdrop')
     staticBackdrop.addEventListener('show.bs.modal', function (event) {
@@ -102,7 +107,4 @@
       modalDeleteBtn.setAttribute('href',domain_delete_url)
     })
     </script>
-
 {% endblock %}
-
-
