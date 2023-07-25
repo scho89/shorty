@@ -127,6 +127,7 @@ def domain_create(request):
                 domain.name = form.cleaned_data['name']
                 domain.dns_txt = domain.create_dns_txt()
                 domain.owner = request.user
+                domain.host_allowed = False
                 domain.save()
                 return redirect('common:domain_list')
                                     
