@@ -7,6 +7,13 @@ from django.utils import timezone
 from common.forms import UserForm
 from shorty.forms import SurlForm,DomainForm
 from shorty.models import Domain,Surl
+from pathlib import Path
+import environ
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+env = environ.Env()
+environ.Env.read_env(BASE_DIR / '.env')
+SSL_LIST = env('SSL_LIST')
 
 # Create your views here.
 
@@ -143,6 +150,10 @@ def domain_verify(request,pk):
                 domain.last_ownership_check = timezone.now()
                 domain.dns_txt = None
                 domain.save()
+                
+                with open(SSL_LIST, "a") as f:
+                    f.write(f"{domain.name}\n")
+                                
                 return redirect('common:domain_list')
             
             elif verification == 1:
