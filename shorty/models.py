@@ -28,13 +28,16 @@ class Domain(models.Model):
         # code 2: not verified
         if (not self.last_ownership_check) or self.last_ownership_check - timezone.now() < timedelta(seconds=self.VERIFY_INTERVAL):
             try: 
-                answers = resolve(self.name,'TXT')
+                answers_txt = resolve(self.name,'TXT')
+                answers_cname = resolve(self.name, 'CNAME')
             except NoAnswer:
                 return 2
                 
-            for answer in answers:
+            for answer in answers_txt:
                 if self.dns_txt in answer.to_text():
-                    return 0
+                    for answer in answers_cname:
+                        if '443.scho.kr' in answer.to_text():
+                            return 0
             return 2
         return 1    
     
