@@ -13,7 +13,8 @@ class Domain(models.Model):
     is_verified = models.BooleanField(default=False)
     dns_txt = models.CharField(max_length=50,null=True,blank=True)
     last_ownership_check = models.DateTimeField(null=True,blank=True)
-
+    host_allowed = models.BooleanField(default=False)
+    
     VERIFY_INTERVAL = 5
 
     def __str__(self):
