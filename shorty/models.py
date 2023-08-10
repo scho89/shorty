@@ -57,6 +57,7 @@ class Surl(models.Model):
         error_messages={
             "unique": "단축 URL이 이미 존재합니다. Domain과 alias를 확인하십시오.",
         },)
+    visit_counts = models.IntegerField(default=0)
     
     # def save(self, *args, **kwargs):
     #     self.short_url = str(self.domain)+"/"+(self.alias)
