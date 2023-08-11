@@ -29,6 +29,8 @@ def surl(request,alias):
         surl = False
     
     if surl:
+        surl.visit_counts += 1
+        surl.save()
         return redirect(surl.url)
     
     return redirect('common:url')
