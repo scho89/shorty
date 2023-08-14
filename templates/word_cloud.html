@@ -30,8 +30,6 @@
         */
         opacity: calc((15 - (9 - var(--size))) / 15); 
       }
-      
-
 
       ul.cloud a[data-weight="1"] { --size: 1; }
       ul.cloud a[data-weight="2"] { --size: 2; }
@@ -50,7 +48,6 @@
       ul.cloud a[data-weight="15"] { --size: 15; }
       ul.cloud a[data-weight="16"] { --size: 16; }
       ul.cloud a[data-weight="17"] { --size: 17; }
-
 
 
       ul[data-show-value] a::after {
@@ -97,7 +94,7 @@
 
 <ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
 {% for wc in wc_data %}
-<li><a style="color:{{ wc.color }}" data-weight="{{ wc.weight }}" href="{{ wc.short_url }}">{{ wc.alias }}</a></li>
+<li><a href="" style="color:{{ wc.color }}" data-weight="{{ wc.weight }}" >{{ wc.alias }}</a></li>
 {% endfor %}
 </ul> 
 

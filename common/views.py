@@ -59,10 +59,8 @@ def url(request):
             
             # get wc data
             wc_data = get_url_wc_data(surls)
-            print(wc_data)
-            # print(colors)
                                     
-            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data} #, 'colors':colors}
+            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data}
             return render(request,'common/url.html',context=context)    
 
         else:
@@ -217,12 +215,10 @@ def page_not_found(request, exception):
 def get_url_wc_data(surls):
     wc_data = []
     counts = []
-    # colors = []
-    # total = 0
+    colors = []
     
     for surl in surls:
         counts.append(surl.visit_counts)
-        #total += surl.visit_counts
     
     if max(counts) == 0:
         counts.append(1)
@@ -240,7 +236,7 @@ def get_url_wc_data(surls):
     
     shuffle(wc_data)
     
-    return wc_data#,colors
+    return wc_data #,colors
          
 class Serr:
     message = None
