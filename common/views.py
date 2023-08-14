@@ -58,11 +58,11 @@ def url(request):
             form = SurlForm()
             
             # get wc data
-            wc_data, colors = get_url_wc_data(surls)
+            wc_data = get_url_wc_data(surls)
             print(wc_data)
-            print(colors)
+            # print(colors)
                                     
-            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data, 'colors':colors}
+            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data} #, 'colors':colors}
             return render(request,'common/url.html',context=context)    
 
         else:
@@ -217,7 +217,7 @@ def page_not_found(request, exception):
 def get_url_wc_data(surls):
     wc_data = []
     counts = []
-    colors = []
+    # colors = []
     # total = 0
     
     for surl in surls:
@@ -228,15 +228,15 @@ def get_url_wc_data(surls):
         data = {}
         data['alias'] = surl.alias
         data['weight'] = round(surl.visit_counts/max(counts)*16)+1
-        # data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
+        data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
         wc_data.append(data)
         
-    for i in range(1,18):
-        colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
+    # for i in range(1,18):
+    #     colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
     
     shuffle(wc_data)
     
-    return wc_data,colors
+    return wc_data#,colors
          
 class Serr:
     message = None
