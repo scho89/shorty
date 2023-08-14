@@ -227,10 +227,11 @@ def get_url_wc_data(surls):
     for surl in surls:
         data = {}
         data['alias'] = surl.alias
-        data['weight'] = round(surl.visit_counts/max(counts)*16)
+        data['weight'] = round(surl.visit_counts/max(counts)*17)+1
         # data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
         wc_data.append(data)
-    for i in range(16):
+        
+    for i in range(1,18):
         colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
     
     shuffle(wc_data)
