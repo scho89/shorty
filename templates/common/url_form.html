@@ -26,7 +26,7 @@
         {% endif %}
     <!-- 오류 표시 End-->
     
-            <div class="input-group mb-3 w-75">
+            <div class="input-group mb-3">
                 <select class="form-select" aria-label="Domain selection" name="domain" id="domain">
                         <option>Select domain</option>
                         {% for domain in domains %}
@@ -42,11 +42,11 @@
                 <span class="input-group-text">/</span>
                 <input type="text" class="form-control" name="alias" id="alias" value="{{ form.alias.value|default_if_none:'' }}" placeholder="alias">
             </div>
-            <div class="input-group mb-3 w-75">
+            <div class="input-group mb-3">
 
                 <input type="text" class="form-control" name="url" id="url" value="{{ form.url.value|default_if_none:'' }}" placeholder="URL">
             </div>
-            <div class="input-group mb-3 w-75">
+            <div class="input-group mb-3">
 
                 <input type="text" class="form-control" name="note" id="note" value="{{ form.note.value|default_if_none:'' }}" placeholder="Note">
 
