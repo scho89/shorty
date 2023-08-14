@@ -229,6 +229,7 @@ def get_url_wc_data(surls):
         data['alias'] = surl.alias
         data['weight'] = round(surl.visit_counts/max(counts)*16)+1
         data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
+        data['short_url'] = surl.short_url
         wc_data.append(data)
         
     # for i in range(1,18):
