@@ -55,6 +55,11 @@ def url(request):
         if request.user.is_authenticated:
             domains,surls = get_owned_objects(request)
             form = SurlForm()
+            
+            # get wc data
+            wc_data = get_url_wc_data(surls)
+            print(wc_data)
+                                    
             context = {'surls':surls,'domains':domains, 'form':form}
             return render(request,'common/url.html',context=context)    
 
@@ -207,7 +212,20 @@ def domain_delete(request, pk):
 def page_not_found(request, exception):
     return render(request, 'common/404.html', {})
 
-
+def get_url_wc_data(surls):
+    wc_data = []
+    total = 0
+    
+    for surl in surls:
+        total += surl.visit_counts
+    
+    for surl in surls:
+        data = {}
+        data = {'alias':surl.alias,'ratio':round(100*(surl.visit_counts / total),-1)}
+        wc_data.append(data)
+    
+    return wc_data
+         
 class Serr:
     message = None
     code = None
