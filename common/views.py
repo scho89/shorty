@@ -8,7 +8,9 @@ from common.forms import UserForm
 from shorty.forms import SurlForm,DomainForm
 from shorty.models import Domain,Surl
 from pathlib import Path
+from random import randint
 import environ
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
@@ -60,7 +62,7 @@ def url(request):
             wc_data = get_url_wc_data(surls)
             print(wc_data)
                                     
-            context = {'surls':surls,'domains':domains, 'form':form}
+            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data}
             return render(request,'common/url.html',context=context)    
 
         else:
@@ -214,14 +216,19 @@ def page_not_found(request, exception):
 
 def get_url_wc_data(surls):
     wc_data = []
-    total = 0
+    counts = []
+    colors = []
+    # total = 0
     
     for surl in surls:
-        total += surl.visit_counts
+        counts.append(surl.visit_counts)
+        #total += surl.visit_counts
     
     for surl in surls:
         data = {}
-        data = {'alias':surl.alias,'ratio':round(100*(surl.visit_counts / total),-1)}
+        data['alias'] = surl.alias
+        data['weight'] = round(surl.visit_counts/max(counts)*16)
+        data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
         wc_data.append(data)
     
     return wc_data

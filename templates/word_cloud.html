@@ -32,7 +32,12 @@
         opacity: calc((15 - (9 - var(--size))) / 15); 
       }
       
-      ul.cloud a[data-weight="1"] { --size: 1; }
+{% for wc in wc_data  %}
+      ul.cloud a[data-weight="{{ wc.weight }}"] { --size: {{ wc.weight }}; --color: {{ wc.color }};}
+{% endfor %}
+      
+/*
+      ul.cloud a[data-weight="1"] { --size: 1; --color: #181;}
       ul.cloud a[data-weight="2"] { --size: 2; }
       ul.cloud a[data-weight="3"] { --size: 3; }
       ul.cloud a[data-weight="4"] { --size: 4; }
@@ -40,17 +45,24 @@
       ul.cloud a[data-weight="6"] { --size: 8; }
       ul.cloud a[data-weight="7"] { --size: 10; }
       ul.cloud a[data-weight="8"] { --size: 13; }
-      ul.cloud a[data-weight="9"] { --size: 16; }
-      
+      ul.cloud a[data-weight="9"] { --size: 16; --color: #33f; }
+*/
+
+
+
       ul[data-show-value] a::after {
         content: " (" attr(data-weight) ")";
         font-size: 1rem;
       }
-      
+
+
+      /*
       ul.cloud li:nth-child(2n+1) a { --color: #181; }
       ul.cloud li:nth-child(3n+1) a { --color: #33a; }
       ul.cloud li:nth-child(4n+1) a { --color: #c38; }
-      
+      */
+
+
       ul.cloud a:focus {
         outline: 1px dashed;
       }
@@ -81,6 +93,13 @@
 </style>
 
 <ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
+{% for wc in wc_data %}
+    <li><a data-weight="{{ wc.weight }}" href="/{{ wc.alias }}">{{ wc.alias }}</a></li>
+{% endfor %}
+</ul> 
+
+<!-- 
+<ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
     <li><a data-weight="4" href="/tag/http">HTTP</a></li>
     <li><a data-weight="2" href="/tag/ember">Ember</a></li>
     <li><a data-weight="5" href="/tag/sass">Sass</a></li>
@@ -96,4 +115,4 @@
     <li><a data-weight="8" href="/tag/css">CSS</a></li>
     <li><a data-weight="1" href="/tag/cache">Cache</a></li>
     <li><a data-weight="3" href="/tag/less">Less</a></li>
-  </ul>
+  </ul> -->
