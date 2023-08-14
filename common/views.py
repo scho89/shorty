@@ -11,6 +11,7 @@ from pathlib import Path
 from random import randint,shuffle
 import environ
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
@@ -56,13 +57,7 @@ def url(request):
         if request.user.is_authenticated:
             domains,surls = get_owned_objects(request)
             form = SurlForm()
-            
-            # get wc data
-            wc_data, colors = get_url_wc_data(surls)
-            print(wc_data)
-            print(colors)
-                                    
-            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data, 'colors':colors}
+            context = {'surls':surls,'domains':domains, 'form':form}
             return render(request,'common/url.html',context=context)    
 
         else:
@@ -214,29 +209,7 @@ def domain_delete(request, pk):
 def page_not_found(request, exception):
     return render(request, 'common/404.html', {})
 
-def get_url_wc_data(surls):
-    wc_data = []
-    counts = []
-    colors = []
-    # total = 0
-    
-    for surl in surls:
-        counts.append(surl.visit_counts)
-        #total += surl.visit_counts
-    
-    for surl in surls:
-        data = {}
-        data['alias'] = surl.alias
-        data['weight'] = round(surl.visit_counts/max(counts)*16)
-        # data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
-        wc_data.append(data)
-    for i in range(16):
-        colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
-    
-    shuffle(wc_data)
-    
-    return wc_data,colors
-         
+
 class Serr:
     message = None
     code = None
