@@ -8,9 +8,8 @@ from common.forms import UserForm
 from shorty.forms import SurlForm,DomainForm
 from shorty.models import Domain,Surl
 from pathlib import Path
-from random import randint
+from random import randint,shuffle
 import environ
-
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
@@ -59,10 +58,11 @@ def url(request):
             form = SurlForm()
             
             # get wc data
-            wc_data = get_url_wc_data(surls)
+            wc_data, colors = get_url_wc_data(surls)
             print(wc_data)
+            print(colors)
                                     
-            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data}
+            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data, 'colors':colors}
             return render(request,'common/url.html',context=context)    
 
         else:
@@ -228,10 +228,14 @@ def get_url_wc_data(surls):
         data = {}
         data['alias'] = surl.alias
         data['weight'] = round(surl.visit_counts/max(counts)*16)
-        data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
+        # data['color'] = "#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]
         wc_data.append(data)
+    for i in range(16):
+        colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
     
-    return wc_data
+    shuffle(wc_data)
+    
+    return wc_data,colors
          
 class Serr:
     message = None
