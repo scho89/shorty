@@ -224,6 +224,9 @@ def get_url_wc_data(surls):
         counts.append(surl.visit_counts)
         #total += surl.visit_counts
     
+    if max(counts) == 0:
+        counts.append(1)
+    
     for surl in surls:
         data = {}
         data['alias'] = surl.alias
