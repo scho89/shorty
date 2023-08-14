@@ -31,7 +31,9 @@
         opacity: calc((15 - (9 - var(--size))) / 15); 
       }
       
-{% for color in colors  %} ul.cloud a[data-weight="{{ forloop.counter }}"] { --size: {{ forloop.counter }}; --color: {{ color }};} {% endfor %}
+{% for color in colors  %}
+ul.cloud a[data-weight="{{ forloop.counter }}"] { --size: {{ forloop.counter }}; --color: {{ color }};} 
+{% endfor %}
       
 /*
       ul.cloud a[data-weight="1"] { --size: 1; --color: #181;}
@@ -90,7 +92,9 @@
 </style>
 
 <ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
-{% for wc in wc_data %}<li><a data-weight="{{ wc.weight }}" href="/{{ wc.alias }}">{{ wc.alias }}</a></li>{% endfor %}
+{% for wc in wc_data %}
+<li><a data-weight="{{ wc.weight }}" href="/{{ wc.alias }}">{{ wc.alias }}</a></li>
+{% endfor %}
 </ul> 
 
 <!-- 
