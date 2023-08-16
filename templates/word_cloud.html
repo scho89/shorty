@@ -30,7 +30,7 @@
         */
         opacity: calc((15 - (9 - var(--size))) / 15); 
       }
-
+/*
       ul.cloud a[data-weight="1"] { --size: 1; }
       ul.cloud a[data-weight="2"] { --size: 2; }
       ul.cloud a[data-weight="3"] { --size: 3; }
@@ -47,7 +47,11 @@
       ul.cloud a[data-weight="14"] { --size: 14; }
       ul.cloud a[data-weight="15"] { --size: 15; }
       ul.cloud a[data-weight="16"] { --size: 16; }
-      ul.cloud a[data-weight="17"] { --size: 17; }
+      ul.cloud a[data-weight="17"] { --size: 17; }*/
+
+      {% for color in colors %}
+      ul.cloud a[data-weight="{{ forloop.counter }}"] { --size: {{ forloop.counter }}; --color:{{ color }} }
+      {% endfor %}
 
 
       ul[data-show-value] a::after {
@@ -66,7 +70,24 @@
       ul.cloud a:focus {
         outline: 1px dashed;
       }
-      
+
+
+      {% for color in colors %}
+      ul.cloud a[data-weight="{{ forloop.counter }}"]::before {      
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 0;
+        height: 100%;
+        background: {{ color }};
+        transform: translate(-50%, 0);
+        opacity: 0.15;
+        transition: width 0.25s;
+       }
+      {% endfor %}
+
+/*      
       ul.cloud a::before {
         content: "";
         position: absolute;
@@ -78,8 +99,8 @@
         transform: translate(-50%, 0);
         opacity: 0.15;
         transition: width 0.25s;
-      }
-      
+      }*/
+
       ul.cloud a:focus::before,
       ul.cloud a:hover::before {
         width: 100%;
@@ -94,7 +115,7 @@
 
 <ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
 {% for wc in wc_data %}
-<li><a href="" style="color:{{ wc.color }}" data-weight="{{ wc.weight }}" >{{ wc.alias }}</a></li>
+<li><a href="" data-weight="{{ wc.weight }}" >{{ wc.alias }}</a></li>
 {% endfor %}
 </ul> 
 

@@ -58,9 +58,9 @@ def url(request):
             form = SurlForm()
             
             # get wc data
-            wc_data = get_url_wc_data(surls)
+            wc_data, colors = get_url_wc_data(surls)
                                     
-            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data}
+            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data, 'colors':colors}
             return render(request,'common/url.html',context=context)    
 
         else:
@@ -231,12 +231,12 @@ def get_url_wc_data(surls):
         data['short_url'] = surl.short_url
         wc_data.append(data)
         
-    # for i in range(1,18):
-    #     colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
+    for i in range(1,18):
+        colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
     
     shuffle(wc_data)
     
-    return wc_data #,colors
+    return wc_data ,colors
          
 class Serr:
     message = None
