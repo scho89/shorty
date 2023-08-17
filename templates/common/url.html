@@ -9,7 +9,7 @@
       </div>
       <div class="col">
         <div class="my-5">
-        {% include 'word_cloud.html'%}
+        {% include 'word_cloud.html' %}
         </div>
         </div>
     </div>
@@ -23,7 +23,7 @@
 </div>
 
 <div class="container my-3">
-<table class="table-responsive">
+
     <table class="table table-hover table-bordered">
         <thead>
             <tr>
@@ -42,13 +42,15 @@
         <td><a href="{{ surl.url }}" class="link-secondary">{{ surl.url }}</a></td>
         <td>{{ surl.note }}</td>
         <td class="text-center">
-            <a class="btn btn-danger btn-sm" href="{% url 'common:url_delete' pk=surl.id %}">삭제</a>
+
+                        <a class="btn btn-secondary btn-sm" href="{% url 'common:url_edit' pk=surl.id %}">수정</a>
+                        <a class="btn btn-danger btn-sm" href="{% url 'common:url_delete' pk=surl.id %}">삭제</a>
         </td>
         </tr>
         {% endfor %}
     </tbody>
     </table>
-</table>
+
 </div>
 
    

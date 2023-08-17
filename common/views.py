@@ -118,6 +118,44 @@ def url_delete(request,pk):
     return redirect('common:url')
 
 @login_required(login_url='common:login')
+def url_edit(request,pk):
+    if request.user.is_authenticated:
+        surl=Surl.objects.get(pk=pk)
+        if surl.domain.owner.username == request.user.username:
+            if request.method == "POST":
+                form = SurlForm(request.POST,instance=surl)
+                if form.is_valid() :
+                    surl = form.save(commit=False)
+                    surl.domain = Domain.objects.get(name=form.cleaned_data['domain'])
+                    surl.short_url = str(surl.domain.name)+"/"+(surl.alias)
+                    try:
+                        surl.validate_unique()
+                        surl.save()
+                        return redirect('common:url')
+                                        
+                    except ValidationError as e:
+                        domains, surls = get_owned_objects(request)
+                        context = {'surls':surls,'domains':domains, 'form':form, 'e':e, 'surl':surl}
+                        return render(request,'common/url.html',context=context)    
+                    
+            else:
+                form = SurlForm(instance=surl)
+                domains, surls = get_owned_objects(request)
+                wc_data, colors = get_url_wc_data(surls)
+                context = {'surls':surls,'domains':domains, 'form':form, 'surl':surl, 'wc_data':wc_data, 'colors':colors}
+                return render(request,'common/url.html',context=context)    
+    
+            return redirect('common:url')
+            
+        else:
+            err = Serr("내 소유의 주소만 편집이 가능합니다.", 403)
+            context={'err':err}
+            return render(request, 'common/error.html', context=context)
+
+    return redirect('common:url')    
+
+
+@login_required(login_url='common:login')
 def domain_create(request):
     
     if request.user.is_authenticated:
