@@ -115,7 +115,7 @@
 
 <ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
 {% for wc in wc_data %}
-<li><a href="//{{wc.url}}" data-weight="{{ wc.weight }}" >{{ wc.alias }}</a></li>
+<li><a href="{{wc.url}}" data-weight="{{ wc.weight }}" >{{ wc.alias }}</a></li>
 {% endfor %}
 </ul> 
 
