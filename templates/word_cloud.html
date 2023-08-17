@@ -115,7 +115,7 @@
 
 <ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
 {% for wc in wc_data %}
-<li><a href="{{wc.url}}" data-weight="{{ wc.weight }}" >{{ wc.alias }}</a></li>
+<li><a href="{{wc.url}}" data-weight="{{ wc.weight }}" title="{{ wc.short_url }}">{{ wc.alias }}</a></li>
 {% endfor %}
 </ul> 
 
@@ -137,3 +137,10 @@
     <li><a data-weight="1" href="/tag/cache">Cache</a></li>
     <li><a data-weight="3" href="/tag/less">Less</a></li>
   </ul> -->
+
+
+  {% block script %}
+
+  {% endblock %}
+
+
