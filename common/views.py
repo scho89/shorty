@@ -98,9 +98,7 @@ def url_create(request):
 
 def get_owned_objects(request):
     domains = Domain.objects.filter(owner__username=request.user.username)
-    print(domains)
     surls = Surl.objects.filter(domain__in=domains)
-    print(surls)
     return domains,surls
 
 @login_required(login_url='common:login')
