@@ -18,38 +18,36 @@
 
 
 
-<div class="container my-3">
-    
-</div>
+
 
 <div class="container my-3">
 
-    <table class="table table-hover table-bordered">
-        <thead>
-            <tr>
-                <th scope="col" class="text-center">Short URL</th>
-                <th scope="col" class="text-center">Visit counts</th>
-                <th scope="col" class="text-center">URL</th>
-                <th scope="col" class="text-center">Note</th>
-                <th scope="col" class="text-center">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for surl in surls %}
-        <tr>
-        <td>{{ surl.short_url }}</td>
-        <td class="text-end">{{ surl.visit_counts }}</td>
-        <td><a href="{{ surl.url }}" class="link-secondary">{{ surl.url }}</a></td>
-        <td>{{ surl.note }}</td>
-        <td class="text-center">
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th scope="col" class="text-center">Short URL</th>
+                        <th scope="col" class="text-center">Visit counts</th>
+                        <th scope="col" class="text-center">URL</th>
+                        <th scope="col" class="text-center">Note</th>
+                        <th scope="col" class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for surl in surls %}
+                <tr>
+                <td>{{ surl.short_url }}</td>
+                <td class="text-end">{{ surl.visit_counts }}</td>
+                <td style="word-break:break-all"><a href="{{ surl.url }}" class="link-secondary">{{ surl.url }}</a></td>
+                <td>{{ surl.note }}</td>
+                <td class="text-center">
 
-                        <a class="btn btn-secondary btn-sm" href="{% url 'common:url_edit' pk=surl.id %}">수정</a>
-                        <a class="btn btn-danger btn-sm" href="{% url 'common:url_delete' pk=surl.id %}">삭제</a>
-        </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-    </table>
+                                <a class="btn btn-secondary btn-sm" href="{% url 'common:url_edit' pk=surl.id %}">수정</a>
+                                <a class="btn btn-danger btn-sm" href="{% url 'common:url_delete' pk=surl.id %}">삭제</a>
+                </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+                </table>
 
 </div>
 
