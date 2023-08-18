@@ -55,7 +55,9 @@ def url(request):
     if request.method == "GET":
         if request.user.is_authenticated:
             domains,surls = get_owned_objects(request)
+            surls=surls.order_by('-visit_counts')
             form = SurlForm()
+            
             
             # get wc data
             wc_data, colors = get_url_wc_data(surls)
