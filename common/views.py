@@ -1,4 +1,6 @@
 from datetime import timedelta
+from django.conf import settings 
+from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -9,7 +11,12 @@ from shorty.forms import SurlForm,DomainForm
 from shorty.models import Domain,Surl
 from pathlib import Path
 from random import randint,shuffle
+
+
 import environ
+import json
+import urllib
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
@@ -22,13 +29,41 @@ SSL_LIST = env('SSL_LIST')
 def signup(request):
     if request.method == "POST":
         form = UserForm(request.POST)
-        if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            raw_password = form.cleaned_data.get('password1')
-            user = authenticate(username=username, password=raw_password)
-            login(request, user)
-            return redirect('common:url')
+
+        # ''' Begin reCAPTCHA validation '''
+        recaptcha_response = request.POST.get('g-recaptcha-response')
+        url = 'https://www.google.com/recaptcha/api/siteverify'
+        values = {
+            'secret': settings.RECAPTCHA_SECRET,
+            'response': recaptcha_response
+        }
+        data = urllib.parse.urlencode(values).encode()
+        req =  urllib.request.Request(url, data=data)
+        response = urllib.request.urlopen(req)
+        result = json.loads(response.read().decode())
+        # ''' End reCAPTCHA validation '''
+
+        if result['success']:
+            if form.is_valid():
+                form.save()
+                username = form.cleaned_data.get('username')
+                raw_password = form.cleaned_data.get('password1')
+                user = authenticate(username=username, password=raw_password)
+                login(request, user)
+                return redirect('common:url')
+            
+        else:
+            messages.error(request, 'reCAPTCHA가 완료되지 않았습니다. 확인 후 다시 시도하세요.')
+
+        
+        # if form.is_valid():
+        #     form.save()
+        #     username = form.cleaned_data.get('username')
+        #     raw_password = form.cleaned_data.get('password1')
+        #     user = authenticate(username=username, password=raw_password)
+        #     login(request, user)
+        #     return redirect('common:url')
+
     else:
         form = UserForm()
         
@@ -258,7 +293,7 @@ def get_url_wc_data(surls):
     for surl in surls:
         counts.append(surl.visit_counts)
     
-    if max(counts) == 0:
+    if not counts :
         counts.append(1)
     
     for surl in surls:
