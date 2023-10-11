@@ -15,7 +15,9 @@ from random import randint,shuffle
 
 import environ
 import json
-import urllib
+import urllib.request
+import urllib.parse
+
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
