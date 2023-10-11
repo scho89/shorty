@@ -3,6 +3,10 @@ from django.db.models import Q
 from django.http import HttpResponse
 from shorty.models import Surl
 
+import logging
+
+logger = logging.getLogger('shorty')
+
 # Create your views here.
 
 
@@ -19,6 +23,7 @@ def index(request):
     #     return render(request,'shorty/index.html')    
 
 def surl(request,alias):
+    logger.info(alias)
     domain=(request.get_host()).split(':')[0]
 
     try:

@@ -204,5 +204,9 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'shorty': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+        },
     }
 }

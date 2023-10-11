@@ -15,11 +15,12 @@ from random import randint,shuffle
 
 import environ
 import json
+import logging
 import urllib.request
 import urllib.parse
 
 
-
+logger=logging.getLogger('shorty')
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
