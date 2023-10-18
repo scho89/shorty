@@ -26,6 +26,7 @@ env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
 SSL_LIST = env('SSL_LIST')
 
+
 # Create your views here.
 
 def signin(request):
