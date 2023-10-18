@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError,ObjectDoesNotExist
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.utils import timezone
 from common.forms import UserForm
@@ -306,7 +306,7 @@ def domain_delete(request, pk):
                 messages.error(request,"내 소유의 도메인만 삭제가 가능합니다.")
                 return redirect('common:domain_list')       
             
-        except ObjectDoesNotExist:
+        except Domain.DoesNotExist:
             messages.error(request,"존재하지 않는 도메인입니다.")
             return redirect('common:domain_list')  
     
