@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError,ObjectDoesNotExist
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.utils import timezone
 from common.forms import UserForm
@@ -73,7 +73,7 @@ def signup(request):
                 raw_password = form.cleaned_data.get('password1')
                 user = authenticate(username=username, password=raw_password)
                 login(request, user)
-                message.success(request,"가입 완료")
+                messages.success(request,"가입 완료")
                 return redirect('common:url')
             
         else:
@@ -160,6 +160,7 @@ def url_create(request):
 def get_owned_objects(request):
     domains = Domain.objects.filter(owner__username=request.user.username)
     surls = Surl.objects.filter(domain__in=domains)
+    surls=surls.order_by('-visit_counts')
     return domains,surls
 
 @login_required(login_url='common:login')
@@ -172,9 +173,8 @@ def url_delete(request,pk):
             surl.delete()
             
         else:
-            err = Serr("내 소유의 주소만 삭제가 가능합니다.", 403)
-            context={'err':err}
-            return render(request, 'common/error.html', context=context)
+            messages.error(request, "내 소유의 주소만 삭제가 가능합니다.")
+            return render(request,'common/url.html')    
 
     return redirect('common:url')
 
@@ -192,16 +192,19 @@ def url_edit(request,pk):
                     try:
                         surl.validate_unique()
                         surl.save()
+                        messages.success(request,f"URL {surl.short_url}이 변경되었습니다.")
                         return redirect('common:url')
                                         
                     except ValidationError as e:
                         domains, surls = get_owned_objects(request)
                         context = {'surls':surls,'domains':domains, 'form':form, 'e':e, 'surl':surl}
+                        messages.error(request,"중복된 주소가 존재합니다.")
                         return render(request,'common/url.html',context=context)    
                     
             else:
                 form = SurlForm(instance=surl)
                 domains, surls = get_owned_objects(request)
+                
                 wc_data, colors = get_url_wc_data(surls)
                 context = {'surls':surls,'domains':domains, 'form':form, 'surl':surl, 'wc_data':wc_data, 'colors':colors}
                 return render(request,'common/url.html',context=context)    
@@ -209,9 +212,8 @@ def url_edit(request,pk):
             return redirect('common:url')
             
         else:
-            err = Serr("내 소유의 주소만 편집이 가능합니다.", 403)
-            context={'err':err}
-            return render(request, 'common/error.html', context=context)
+            messages.error(request,"내 소유의 주소만 편집이 가능합니다.")
+            return render(request,'common/url.html')    
 
     return redirect('common:url')    
 
@@ -264,9 +266,9 @@ def domain_verify(request,pk):
                 print(domain.VERIFY_INTERVAL)
 
                 to_retry=domain.last_ownership_check + timedelta(seconds=Domain.VERIFY_INTERVAL) - timezone.now()
-                err = f"{to_retry.seconds:,}초 뒤에 다시 시도하세요."
+                messages.error(request,f"{to_retry.seconds:,}초 뒤에 다시 시도하세요.")
                 domains = Domain.objects.filter(owner__username=request.user.username)
-                context = {'err':err,'domains':domains}
+                context = {'domains':domains}
                 
                 return render(request, 'common/domain.html', context=context)
                 
@@ -280,9 +282,8 @@ def domain_verify(request,pk):
                 domain.save()
                 return render(request, 'common/domain.html', context=context)                
         else:
-            err = Serr("내 소유의 도메인만 확인이 가능합니다.", 403)
-            context = {'err':err}
-            return render(request, 'common/domain.html', context=context)     
+            messages.error(request,"내 소유의 도메인만 확인이 가능합니다.")
+            return render(request, 'common/domain.html')     
                 
     else:
         return HttpResponse("login required")
@@ -291,20 +292,26 @@ def domain_verify(request,pk):
 def domain_delete(request, pk):
     
     if request.user.is_authenticated:
-        domain = Domain.objects.get(pk=pk)
-        if domain.owner.username == request.user.username:
-            domain.delete()
-            domains = Domain.objects.filter(owner__username=request.user.username)
-            context = {'domains':domains}
-            return render(request, 'common/domain.html', context=context)    
-                                    
-        else:
-            err = Serr("내 소유의 도메인만 삭제가 가능합니다.", 403)
-            context={'err':err}
-            return render(request, 'common/error.html', context=context)
+        try:        
+            domain = Domain.objects.get(pk=pk)
+            if domain.owner.username == request.user.username:
+                domain.delete()
+                domains = Domain.objects.filter(owner__username=request.user.username)
+                context = {'domains':domains}
+                messages.success(request,f"도메인 {domain.name}이 삭제되었습니다.")
+                return redirect('common:domain_list')
+                # return render(request, 'common/domain.html', context=context)    
+                                        
+            else:
+                messages.error(request,"내 소유의 도메인만 삭제가 가능합니다.")
+                return redirect('common:domain_list')       
+            
+        except ObjectDoesNotExist:
+            messages.error(request,"존재하지 않는 도메인입니다.")
+            return redirect('common:domain_list')  
     
     else:
-        return HttpResponse("login required")
+        return redirect('common:domain_list')
 
 def page_not_found(request, exception):
     return render(request, 'common/404.html', {})
@@ -335,16 +342,7 @@ def get_url_wc_data(surls):
     shuffle(wc_data)
     
     return wc_data ,colors
-         
-class Serr:
-    message = None
-    code = None
-    
-    def __init__(self, message, code):
-        self.message = message
-        self.code = code
-        
-        
+
 def recaptcha_result(request):
         # ''' Begin reCAPTCHA validation '''
     recaptcha_response = request.POST.get('g-recaptcha-response')
