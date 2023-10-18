@@ -28,22 +28,42 @@ SSL_LIST = env('SSL_LIST')
 
 # Create your views here.
 
+def signin(request):
+    
+    if request.user.is_authenticated:
+        return redirect('common:url')
+    
+    if request.method == "POST":
+        
+        result = recaptcha_result(request)
+        
+        if result['success']:
+        
+            username = request.POST['username']
+            password = request.POST['password']
+            
+            user = authenticate(request,username=username,password=password)
+            
+            if user is not None:
+                messages.success(request, '로그인 성공')
+                login(request, user)
+                return redirect('common:url')
+            
+            else:
+                messages.error(request, '아이디 혹은 비밀번호가 올바르지 않습니다.')
+                
+        else:
+            messages.error(request, "reCAPTCHA가 완료되지 않았습니다. 확인 후 다시 시도하세요.")
+    
+    return render(request, 'common/login.html')
+    
 
 def signup(request):
     if request.method == "POST":
         form = UserForm(request.POST)
 
         # ''' Begin reCAPTCHA validation '''
-        recaptcha_response = request.POST.get('g-recaptcha-response')
-        url = 'https://www.google.com/recaptcha/api/siteverify'
-        values = {
-            'secret': settings.RECAPTCHA_SECRET,
-            'response': recaptcha_response
-        }
-        data = urllib.parse.urlencode(values).encode()
-        req =  urllib.request.Request(url, data=data)
-        response = urllib.request.urlopen(req)
-        result = json.loads(response.read().decode())
+        result = recaptcha_result(request)
         # ''' End reCAPTCHA validation '''
 
         if result['success']:
@@ -53,6 +73,7 @@ def signup(request):
                 raw_password = form.cleaned_data.get('password1')
                 user = authenticate(username=username, password=raw_password)
                 login(request, user)
+                message.success(request,"가입 완료")
                 return redirect('common:url')
             
         else:
@@ -322,3 +343,19 @@ class Serr:
     def __init__(self, message, code):
         self.message = message
         self.code = code
+        
+        
+def recaptcha_result(request):
+        # ''' Begin reCAPTCHA validation '''
+    recaptcha_response = request.POST.get('g-recaptcha-response')
+    url = 'https://www.google.com/recaptcha/api/siteverify'
+    values = {
+        'secret': settings.RECAPTCHA_SECRET,
+        'response': recaptcha_response
+    }
+    data = urllib.parse.urlencode(values).encode()
+    req =  urllib.request.Request(url, data=data)
+    response = urllib.request.urlopen(req)
+    result = json.loads(response.read().decode())
+    # ''' End reCAPTCHA validation '''
+    return result
