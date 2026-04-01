@@ -3,7 +3,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from dns.resolver import resolve,NoAnswer
+from dns.exception import DNSException
+from dns.resolver import NoAnswer, resolve
 
 # Create your models here.
 
@@ -27,20 +28,21 @@ class Domain(models.Model):
         # code 0: confirmed
         # code 1: retry after 5 minutes
         # code 2: not verified
-        if (not self.last_ownership_check) or self.last_ownership_check - timezone.now() < timedelta(seconds=self.VERIFY_INTERVAL):
-            try: 
-                answers_txt = resolve(self.name,'TXT')
-                answers_cname = resolve(self.name, 'CNAME')
-            except NoAnswer:
-                return 2
-                
-            for answer in answers_txt:
-                if self.dns_txt in answer.to_text():
-                    for answer in answers_cname:
-                        if '443.scho.kr' in answer.to_text():
-                            return 0
+        if self.last_ownership_check and timezone.now() - self.last_ownership_check < timedelta(seconds=self.VERIFY_INTERVAL):
+            return 1
+
+        try:
+            answers_txt = resolve(self.name, 'TXT')
+            answers_cname = resolve(self.name, 'CNAME')
+        except (NoAnswer, DNSException):
             return 2
-        return 1    
+
+        for answer in answers_txt:
+            if self.dns_txt and self.dns_txt in answer.to_text():
+                for cname_answer in answers_cname:
+                    if '443.scho.kr' in cname_answer.to_text():
+                        return 0
+        return 2
     
     # def save(self, *args, **kwargs):
     #     self.short_url = str(self.domain)+"/"+(self.alias)
@@ -58,6 +60,14 @@ class Surl(models.Model):
             "unique": "단축 URL이 이미 존재합니다. Domain과 alias를 확인하십시오.",
         },)
     visit_counts = models.IntegerField(default=0)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['domain', 'alias'], name='shorty_surl_domain_alias_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['domain', 'alias'], name='shorty_unique_alias_per_domain'),
+        ]
     
     # def save(self, *args, **kwargs):
     #     self.short_url = str(self.domain)+"/"+(self.alias)

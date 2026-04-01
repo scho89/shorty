@@ -6,28 +6,44 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from common.forms import UserForm
 from shorty.forms import SurlForm,DomainForm
 from shorty.models import Domain,Surl
-from pathlib import Path
 from random import randint,shuffle
 
-
-import environ
 import json
 import logging
-import urllib.request
+import sys
 import urllib.parse
+import urllib.request
+from urllib.error import URLError
 
 
 logger=logging.getLogger('shorty')
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-env = environ.Env()
-environ.Env.read_env(BASE_DIR / '.env')
-SSL_LIST = env('SSL_LIST')
+SSL_LIST = getattr(settings, 'SSL_LIST', '')
 
 
 # Create your views here.
+def recaptcha_is_bypassed():
+    return settings.DEBUG or 'test' in sys.argv
+
+
+def get_recaptcha_context():
+    return {
+        'recaptcha_enabled': bool(settings.RECAPTCHA_SITE_KEY) and not recaptcha_is_bypassed(),
+        'recaptcha_site_key': settings.RECAPTCHA_SITE_KEY,
+        'recaptcha_bypassed': recaptcha_is_bypassed(),
+    }
+
+
+def get_recaptcha_error_message(result):
+    error_codes = result.get('error-codes', [])
+    if 'recaptcha-not-configured' in error_codes:
+        return 'reCAPTCHA 설정이 누락되었습니다. 환경 변수를 확인하세요.'
+    if 'recaptcha-unavailable' in error_codes:
+        return 'reCAPTCHA 검증 서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.'
+    return 'reCAPTCHA가 완료되지 않았습니다. 확인 후 다시 시도하세요.'
 
 def signin(request):
     
@@ -54,9 +70,9 @@ def signin(request):
                 messages.error(request, '아이디 혹은 비밀번호가 올바르지 않습니다.')
                 
         else:
-            messages.error(request, "reCAPTCHA가 완료되지 않았습니다. 확인 후 다시 시도하세요.")
+            messages.error(request, get_recaptcha_error_message(result))
     
-    return render(request, 'common/login.html')
+    return render(request, 'common/login.html', get_recaptcha_context())
     
 
 def signup(request):
@@ -78,7 +94,7 @@ def signup(request):
                 return redirect('common:url')
             
         else:
-            messages.error(request, 'reCAPTCHA가 완료되지 않았습니다. 확인 후 다시 시도하세요.')
+            messages.error(request, get_recaptcha_error_message(result))
 
         
         # if form.is_valid():
@@ -92,7 +108,7 @@ def signup(request):
     else:
         form = UserForm()
         
-    return render(request, 'common/signup.html', {'form':form})
+    return render(request, 'common/signup.html', {'form': form, **get_recaptcha_context()})
 
 
 def page_not_found(request, exception):
@@ -116,7 +132,7 @@ def url(request):
         if request.user.is_authenticated:
             domains,surls = get_owned_objects(request)
             surls=surls.order_by('-visit_counts')
-            form = SurlForm()
+            form = SurlForm(user=request.user)
             
             
             # get wc data
@@ -128,54 +144,49 @@ def url(request):
         else:
             return render(request,'common/url.html')    
 
-@login_required(login_url='common:login')    
+@login_required(login_url='common:login')
+@require_POST
 def url_create(request):
-    
     if request.user.is_authenticated:
-        if request.method == "POST":
-            form = SurlForm(request.POST)
-            print(form)
-            if form.is_valid() :
-                print('form is valid')
-                surl = form.save(commit=False)
-                surl.domain = Domain.objects.get(name=form.cleaned_data['domain'])
-                surl.short_url = str(surl.domain.name)+"/"+(surl.alias)
-                try:
-                    surl.validate_unique()
-                    surl.save()
-                                    
-                except ValidationError as e:
-                    domains, surls = get_owned_objects(request)
-                    context = {'surls':surls,'domains':domains, 'form':form, 'e':e}
-                    return render(request,'common/url.html',context=context)    
-                
-            else:
+        form = SurlForm(request.POST, user=request.user)
+        if form.is_valid():
+            surl = form.save(commit=False)
+            surl.domain = form.cleaned_data['domain']
+            surl.short_url = str(surl.domain.name) + "/" + surl.alias
+            try:
+                surl.validate_unique()
+                surl.save()
+                messages.success(request, f"URL {surl.short_url}이 등록되었습니다.")
+            except ValidationError as e:
                 domains, surls = get_owned_objects(request)
-                context = {'surls':surls,'domains':domains, 'form':form}
-                return render(request,'common/url.html',context=context)    
-   
+                context = {'surls': surls, 'domains': domains, 'form': form, 'e': e}
+                return render(request, 'common/url.html', context=context)
+        else:
+            domains, surls = get_owned_objects(request)
+            context = {'surls': surls, 'domains': domains, 'form': form}
+            return render(request, 'common/url.html', context=context)
+
         return redirect('common:url')
-    
+
     return HttpResponse('url created.')
 
 def get_owned_objects(request):
-    domains = Domain.objects.filter(owner__username=request.user.username)
+    domains = Domain.objects.filter(owner=request.user).order_by('name')
     surls = Surl.objects.filter(domain__in=domains)
-    surls=surls.order_by('-visit_counts')
-    return domains,surls
+    surls = surls.order_by('-visit_counts')
+    return domains, surls
 
 @login_required(login_url='common:login')
+@require_POST
 def url_delete(request,pk):
-    
     if request.user.is_authenticated:
-        surl=Surl.objects.get(pk=pk)
+        surl = get_object_or_404(Surl, pk=pk)
         if surl.domain.owner.username == request.user.username:
-            # 소유 여부 추가
             surl.delete()
-            
+            messages.success(request, f"URL {surl.short_url}이 삭제되었습니다.")
         else:
             messages.error(request, "내 소유의 주소만 삭제가 가능합니다.")
-            return render(request,'common/url.html')    
+            return render(request,'common/url.html')
 
     return redirect('common:url')
 
@@ -185,10 +196,10 @@ def url_edit(request,pk):
         surl=Surl.objects.get(pk=pk)
         if surl.domain.owner.username == request.user.username:
             if request.method == "POST":
-                form = SurlForm(request.POST,instance=surl)
+                form = SurlForm(request.POST, instance=surl, user=request.user)
                 if form.is_valid() :
                     surl = form.save(commit=False)
-                    surl.domain = Domain.objects.get(name=form.cleaned_data['domain'])
+                    surl.domain = form.cleaned_data['domain']
                     surl.short_url = str(surl.domain.name)+"/"+(surl.alias)
                     try:
                         surl.validate_unique()
@@ -203,7 +214,7 @@ def url_edit(request,pk):
                         return render(request,'common/url.html',context=context)    
                     
             else:
-                form = SurlForm(instance=surl)
+                form = SurlForm(instance=surl, user=request.user)
                 domains, surls = get_owned_objects(request)
                 
                 wc_data, colors = get_url_wc_data(surls)
@@ -220,52 +231,50 @@ def url_edit(request,pk):
 
 
 @login_required(login_url='common:login')
+@require_POST
 def domain_create(request):
-    
     if request.user.is_authenticated:
-        if request.method == "POST":
-            form = DomainForm(request.POST)
-            print(form)
-            if form.is_valid() :
-                print('form is valid')
-                domain = form.save(commit=False)
-                domain.name = form.cleaned_data['name']
-                domain.dns_txt = domain.create_dns_txt()
-                domain.owner = request.user
-                domain.host_allowed = False
-                domain.save()
-                return redirect('common:domain_list')
-                                    
-            else:
-                domains, surls = get_owned_objects(request)
-                context = {'domains':domains, 'form':form}
-                return render(request,'common/domain.html',context=context)    
-    
-    else:
-        return HttpResponse("login required")
+        form = DomainForm(request.POST)
+        if form.is_valid():
+            domain = form.save(commit=False)
+            domain.name = form.cleaned_data['name']
+            domain.dns_txt = domain.create_dns_txt()
+            domain.owner = request.user
+            domain.host_allowed = False
+            domain.save()
+            messages.success(request, f"도메인 {domain.name}이 등록되었습니다.")
+            return redirect('common:domain_list')
+
+        domains, surls = get_owned_objects(request)
+        context = {'domains': domains, 'form': form}
+        return render(request, 'common/domain.html', context=context)
+
+    return HttpResponse("login required")
     
 @login_required(login_url='common:login')
+@require_POST
 def domain_verify(request,pk):
     if request.user.is_authenticated:
-        domain = Domain.objects.get(pk=pk)
+        domain = get_object_or_404(Domain, pk=pk)
         if domain.owner.username == request.user.username:
 
             verification = domain.verify_ownership()
             if verification == 0:
                 domain.is_verified = True
+                domain.host_allowed = True
                 domain.last_ownership_check = timezone.now()
                 domain.dns_txt = None
                 domain.save()
-                
-                with open(SSL_LIST, "a") as f:
-                    f.write(f"{domain.name}\n")
-                                
+
+                if SSL_LIST:
+                    with open(SSL_LIST, "a", encoding="utf-8") as f:
+                        f.write(f"{domain.name}\n")
+
+                messages.success(request, f"도메인 {domain.name}이 인증되었습니다.")
                 return redirect('common:domain_list')
             
             elif verification == 1:
                 # retry, time limit
-                print(domain.VERIFY_INTERVAL)
-
                 to_retry=domain.last_ownership_check + timedelta(seconds=Domain.VERIFY_INTERVAL) - timezone.now()
                 messages.error(request,f"{to_retry.seconds:,}초 뒤에 다시 시도하세요.")
                 domains = Domain.objects.filter(owner__username=request.user.username)
@@ -290,29 +299,24 @@ def domain_verify(request,pk):
         return HttpResponse("login required")
     
 @login_required(login_url='common:login')
+@require_POST
 def domain_delete(request, pk):
-    
     if request.user.is_authenticated:
-        try:        
+        try:
             domain = Domain.objects.get(pk=pk)
             if domain.owner.username == request.user.username:
                 domain.delete()
-                domains = Domain.objects.filter(owner__username=request.user.username)
-                context = {'domains':domains}
-                messages.success(request,f"도메인 {domain.name}이 삭제되었습니다.")
+                messages.success(request, f"도메인 {domain.name}이 삭제되었습니다.")
                 return redirect('common:domain_list')
-                # return render(request, 'common/domain.html', context=context)    
-                                        
-            else:
-                messages.error(request,"내 소유의 도메인만 삭제가 가능합니다.")
-                return redirect('common:domain_list')       
-            
+
+            messages.error(request, "내 소유의 도메인만 삭제가 가능합니다.")
+            return redirect('common:domain_list')
+
         except Domain.DoesNotExist:
-            messages.error(request,"존재하지 않는 도메인입니다.")
-            return redirect('common:domain_list')  
-    
-    else:
-        return redirect('common:domain_list')
+            messages.error(request, "존재하지 않는 도메인입니다.")
+            return redirect('common:domain_list')
+
+    return redirect('common:domain_list')
 
 def page_not_found(request, exception):
     return render(request, 'common/404.html', {})
@@ -321,17 +325,17 @@ def get_url_wc_data(surls):
     wc_data = []
     counts = []
     colors = []
-    
+
     for surl in surls:
         counts.append(surl.visit_counts)
-    
-    if not counts :
-        counts.append(1)
-    
+
+    max_count = max(counts) if counts else 0
+    scale_base = max(max_count, 1)
+
     for surl in surls:
         data = {}
         data['alias'] = surl.alias
-        data['weight'] = round(surl.visit_counts/max(counts)*16)+1
+        data['weight'] = round(surl.visit_counts / scale_base * 16) + 1
         data['color'] = "#"+hex(randint(100,255))[2:]+hex(randint(100,255))[2:]+hex(randint(100,255))[2:]
         data['short_url'] = surl.short_url
         data['url']=surl.url
@@ -345,16 +349,30 @@ def get_url_wc_data(surls):
     return wc_data ,colors
 
 def recaptcha_result(request):
-        # ''' Begin reCAPTCHA validation '''
+    if recaptcha_is_bypassed():
+        return {'success': True, 'skipped': True}
+
     recaptcha_response = request.POST.get('g-recaptcha-response')
+    if not recaptcha_response:
+        return {'success': False, 'error-codes': ['missing-input-response']}
+
+    if not settings.RECAPTCHA_SECRET:
+        logger.warning('reCAPTCHA secret is not configured.')
+        return {'success': False, 'error-codes': ['recaptcha-not-configured']}
+
     url = 'https://www.google.com/recaptcha/api/siteverify'
     values = {
         'secret': settings.RECAPTCHA_SECRET,
-        'response': recaptcha_response
+        'response': recaptcha_response,
     }
     data = urllib.parse.urlencode(values).encode()
-    req =  urllib.request.Request(url, data=data)
-    response = urllib.request.urlopen(req)
-    result = json.loads(response.read().decode())
-    # ''' End reCAPTCHA validation '''
+    req = urllib.request.Request(url, data=data)
+
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            result = json.loads(response.read().decode())
+    except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+        logger.warning('reCAPTCHA verification failed: %s', exc)
+        return {'success': False, 'error-codes': ['recaptcha-unavailable']}
+
     return result

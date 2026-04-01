@@ -17,6 +17,8 @@ import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
@@ -25,20 +27,22 @@ environ.Env.read_env(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
-RECAPTCHA_SECRET = env('RECAPTCHA_SECRET')
-RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY')
+SECRET_KEY = env('SECRET_KEY', default='dev-only-insecure-secret-key')
+RECAPTCHA_SECRET = env('RECAPTCHA_SECRET', default='')
+RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
+SSL_LIST = env('SSL_LIST', default='')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'shorty.apps.ShortyConfig',
+    'common.apps.CommonConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -188,7 +192,7 @@ LOGGING = {
             'level': 'INFO',
             'filters': ['require_debug_false'],
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs/mysite.log',
+            'filename': LOG_DIR / 'mysite.log',
             'maxBytes': 1024*1024*5,  # 5 MB
             'backupCount': 5,
             'formatter': 'standard',

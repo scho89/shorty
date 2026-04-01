@@ -16,10 +16,15 @@
             <input type="password" class="form-control" name="password" id="password" value="{{ form.password.value|default_if_none:'' }}">
         </div>
 
+        {% if recaptcha_enabled %}
         <div class="mb-3">
-            <div class="g-recaptcha" data-sitekey="6LfDzX0oAAAAAC40jAti4OFhRO_HJ45MawM1bz6D" data-callback="recaptcha"></div>
+            <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}" data-callback="recaptcha"></div>
         </div>
-
+        {% elif recaptcha_bypassed %}
+        <div class="alert alert-secondary py-2" role="alert">
+            개발/테스트 환경에서는 reCAPTCHA 검증이 생략됩니다.
+        </div>
+        {% endif %}
 
         <button class="btn btn-primary" type="submit">로그인</button>
     </form>
@@ -28,6 +33,8 @@
 {% endblock %}
 
 {% block script %}
+{% if recaptcha_enabled %}
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+{% endif %}
 {% endblock %}
 

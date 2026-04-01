@@ -1,6 +1,5 @@
-from django.shortcuts import render,redirect
-from django.db.models import Q
-from django.http import HttpResponse
+from django.db.models import F
+from django.shortcuts import redirect
 from shorty.models import Surl
 
 import logging
@@ -23,19 +22,12 @@ def index(request):
     #     return render(request,'shorty/index.html')    
 
 def surl(request,alias):
-    logger.info(alias)
-    domain=(request.get_host()).split(':')[0]
+    domain = request.get_host().split(':')[0]
 
     try:
-        surl = Surl.objects.filter(domain__name=domain).get(alias=alias)
-        print(surl)
-        
+        surl = Surl.objects.only('id', 'url').get(domain__name=domain, alias=alias)
     except Surl.DoesNotExist:
-        surl = False
-    
-    if surl:
-        surl.visit_counts += 1
-        surl.save()
-        return redirect(surl.url)
-    
-    return redirect('common:url')
+        return redirect('common:url')
+
+    Surl.objects.filter(pk=surl.pk).update(visit_counts=F('visit_counts') + 1)
+    return redirect(surl.url)

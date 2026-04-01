@@ -38,7 +38,10 @@
         <div class="btn-group" role="group" aria-label="Basic mixed styles example">
             {% if domain.is_verified %}
             {% else %}
-            <a class="btn btn-warning btn-sm" href="{% url 'common:domain_verify' pk=domain.pk %}">Verify</a>
+            <form method="post" action="{% url 'common:domain_verify' pk=domain.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning btn-sm">Verify</button>
+            </form>
             {% endif %}
 
             {% comment %}            
@@ -73,7 +76,10 @@
                 </div>
                 <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a class="btn btn-danger">Delete</a>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
                 </div>
             </div>
             </div>
@@ -100,11 +106,11 @@
       // Update the modal's content.
       var modalTitle = staticBackdrop.querySelector('.modal-title')
       var modalBody = staticBackdrop.querySelector('.modal-body p')
-      var modalDeleteBtn = staticBackdrop.querySelector('.btn.btn-danger')
+      var modalDeleteForm = staticBackdrop.querySelector('.modal-footer form')
     
       modalTitle.textContent = 'Deleting ' + domain_name
       modalBody.textContent = '정말로 '+ domain_name +'을 삭제하시겠습니까? 해당 도메인과 연결된 모든 URL이 함께 삭제됩니다.'
-      modalDeleteBtn.setAttribute('href',domain_delete_url)
+      modalDeleteForm.setAttribute('action', domain_delete_url)
     })
     </script>
 {% endblock %}
