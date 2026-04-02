@@ -1,41 +1,21 @@
 {% load static %}
-<!doctype>
+<!doctype html>
 <html lang="ko">
-    <head>
-        <!-- required meta tag -->
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-        <!-- bootstrap CSS -->
-        <link rel="stylesheet" type="text/css" href="{% static 'bootstrap.min.css' %}">
-        
-        <!-- pybo CSS -->
-        <title>Shorty</title>
-
-
-		<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5004947987319439" crossorigin="anonymous"></script>
-
-    </head>
-    <body>
-    <!-- Navigation 삽입-->
-    {% include "navbar.html" %}
-    {% include "message.html" %}
-    
-    <!-- 기본 템플릿 안에 삽입될 내용 Start -->
-    {% block content %}
-    {% endblock %}
-    <!-- 기본 템플릿 안에 삽입될 내용 End -->
-    <!-- bootstrap JS -->
-    <script src="{% static 'bootstrap.min.js' %}"></script>
-    <script src="{% static 'bootstrap.bundle.min.js' %}"></script>
-
-    <!-- jQuery scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <!-- 스크립트 -->
-    {% block script %}
-    {% endblock %}
-
-
-    </body>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'brand.css' %}">
+    <title>Shorty</title>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    <div class="site-shell">
+        {% include "navbar.html" %}
+        {% include "message.html" %}
+        {% block content %}{% endblock %}
+    </div>
+    {% block script %}{% endblock %}
+</body>
 </html>

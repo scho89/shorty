@@ -1,6 +1,11 @@
 asgiref==3.6.0
-Django==4.1.10
+Django==4.2.29
 django-environ==0.10.0
 dnspython==2.3.0
-sqlparse==0.4.4
+mssql-django==1.5
+pymssql==2.3.2
+pyodbc==5.1.0
+sqlparse==0.5.4
 tzdata==2022.7
+waitress==3.0.1
+whitenoise==6.7.0

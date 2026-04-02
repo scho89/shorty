@@ -1,110 +1,99 @@
 {% extends 'base.html' %}
 
 {% block content %}
-{% include "common/domain_form.html" %}
-
-<div class="container my-3">
-<table class="table table-hover">
-    <thead>
-        <tr>
-            <th scope="col">Name</th>
-            <th scope="col"></th>
-            <th scope="col">Stauts</th>
-            <th scope="col">Action</th>
-          </tr>
-    </thead>
-    <tbody>
-    {% for domain in domains %}
-    <tr>
-    <td><p class="text-body">{{ domain.name }}</p></td>
-    
-    <td>
-        {% if not domain.is_verified %}
-        <div class="spinner-border text-warning float-end spinner-border-sm" role="status">
-            <span class="visually-hidden">Loading...</span>
+<div class="page-grid">
+    <section class="app-header">
+        <div>
+            <div class="section-label">Domains</div>
+            <h1>Domain management</h1>
+            <p>Register, verify, and manage the domains used for branded short links. The setup panel stays separate from the registry so the page feels more like an operations dashboard than a landing page.</p>
         </div>
+    </section>
 
-    {% endif %}
-    </td>
-
-    <td>
-        {% if domain.is_verified %}
-        <p class="text-success">Verified</p>
-        {% else %}
-        <p class="text-danger">{{ domain.dns_txt }}</p>
-        {% endif %}
-    </td>
-    <td>        
-        <div class="btn-group" role="group" aria-label="Basic mixed styles example">
-            {% if domain.is_verified %}
-            {% else %}
-            <a class="btn btn-warning btn-sm" href="{% url 'common:domain_verify' pk=domain.pk %}">Verify</a>
-            {% endif %}
-
-            {% comment %}            
-            <a class="btn btn-danger btn-sm" href="{% url 'common:domain_delete' pk=domain.pk %}">Delete</a>
-            {% endcomment %} 
-            
-            <!-- Button trigger modal -->
-            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#staticBackdrop" data-bs-delete-url="{% url 'common:domain_delete' pk=domain.pk %}" data-bs-domain-name="{{ domain.name }}">
-                Delete
-            </button>
-
+    <section class="metrics-row">
+        <div class="stat-card">
+            <strong>{{ domains|length }}</strong>
+            <span>Total domains</span>
+            <p>Every configured host in the workspace.</p>
         </div>
-    </td>
+        <div class="stat-card">
+            <strong>{% for domain in domains %}{% if domain.is_verified %}{{ forloop.counter0|add:1 }}{% endif %}{% empty %}0{% endfor %}</strong>
+            <span>Verified</span>
+            <p>Ready to be used in published short links.</p>
+        </div>
+        <div class="stat-card">
+            <strong>{{ domains|length }}</strong>
+            <span>Configured hosts</span>
+            <p>Current routing inventory visible to the team.</p>
+        </div>
+    </section>
 
-    </tr>
-    {% endfor %}
-</tbody>
-</table>
+    <section class="dashboard-shell">
+        <aside class="dashboard-sidebar">
+            {% include "common/domain_form.html" %}
+            <div class="card">
+                <div class="section-label">Process</div>
+                <h2>Verify before use</h2>
+                <p>Add the DNS token for a pending domain, then run verification to move it into the active list.</p>
+            </div>
+        </aside>
+        <div class="dashboard-content">
+            <div class="table-card">
+            <div class="table-header">
+                <div class="table-header-copy">
+                    <div class="section-label">Inventory</div>
+                    <h2>Domain registry</h2>
+                    <p>See which domains are active, pending, or ready for verification.</p>
+                </div>
+                <div class="table-meta">{{ domains|length }} total</div>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table domain-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for domain in domains %}
+                        <tr>
+                            <td><span class="chip">{{ domain.name }}</span></td>
+                            <td class="status-cell">
+                                {% if domain.is_verified %}
+                                <span class="status-chip success">Verified</span>
+                                {% else %}
+                                <span class="status-token">{{ domain.dns_txt }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="inline-actions">
+                                    {% if not domain.is_verified %}
+                                    <form method="post" action="{% url 'common:domain_verify' pk=domain.pk %}">
+                                        {% csrf_token %}
+                                        <button class="button-warning" type="submit">Verify</button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="post" action="{% url 'common:domain_delete' pk=domain.pk %}">
+                                        {% csrf_token %}
+                                        <button class="button-danger" type="submit" onclick="return confirm('Deleting this domain also removes all linked short URLs. Continue?');">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3">
+                                <div class="empty-card">No domains yet. Register a branded host to start publishing custom short links.</div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+    </section>
 </div>
-
-
-        <!-- Modal -->
-        <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-            <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p></p>
-                </div>
-                <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a class="btn btn-danger">Delete</a>
-                </div>
-            </div>
-            </div>
-        </div>
-
-<!-- modal script -->
-
-
-{% endblock %}
-
-{% block script %}
-
-<script type="text/javascript">
-    var staticBackdrop = document.getElementById('staticBackdrop')
-    staticBackdrop.addEventListener('show.bs.modal', function (event) {
-      // Button that triggered the modal
-      var button = event.relatedTarget
-      // Extract info from data-bs-* attributes
-      var domain_delete_url = button.getAttribute('data-bs-delete-url')
-      var domain_name = button.getAttribute('data-bs-domain-name')
-      // If necessary, you could initiate an AJAX request here
-      // and then do the updating in a callback.
-      //
-      // Update the modal's content.
-      var modalTitle = staticBackdrop.querySelector('.modal-title')
-      var modalBody = staticBackdrop.querySelector('.modal-body p')
-      var modalDeleteBtn = staticBackdrop.querySelector('.btn.btn-danger')
-    
-      modalTitle.textContent = 'Deleting ' + domain_name
-      modalBody.textContent = '정말로 '+ domain_name +'을 삭제하시겠습니까? 해당 도메인과 연결된 모든 URL이 함께 삭제됩니다.'
-      modalDeleteBtn.setAttribute('href',domain_delete_url)
-    })
-    </script>
 {% endblock %}

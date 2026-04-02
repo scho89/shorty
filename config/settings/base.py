@@ -17,6 +17,8 @@ import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
@@ -25,20 +27,38 @@ environ.Env.read_env(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
-RECAPTCHA_SECRET = env('RECAPTCHA_SECRET')
-RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY')
+SECRET_KEY = env('SECRET_KEY', default='dev-only-insecure-secret-key')
+RECAPTCHA_SECRET = env('RECAPTCHA_SECRET', default='')
+RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
+SSL_LIST = env('SSL_LIST', default='')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+if not CSRF_TRUSTED_ORIGINS:
+    csrf_hosts = []
+    for host in ALLOWED_HOSTS:
+        normalized = host.strip()
+        if not normalized or normalized in {'127.0.0.1', 'localhost'}:
+            continue
+        if normalized.startswith('.'):
+            normalized = normalized.lstrip('.')
+        if ':' in normalized:
+            continue
+        csrf_hosts.append(f'https://{normalized}')
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(csrf_hosts))
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'shorty.apps.ShortyConfig',
+    'common.apps.CommonConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,6 +70,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -125,7 +146,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
@@ -189,7 +211,7 @@ LOGGING = {
             'level': 'INFO',
             'filters': ['require_debug_false'],
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs/mysite.log',
+            'filename': LOG_DIR / 'mysite.log',
             'maxBytes': 1024*1024*5,  # 5 MB
             'backupCount': 5,
             'formatter': 'standard',

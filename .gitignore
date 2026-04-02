@@ -132,3 +132,5 @@ dmypy.json
 
 # logs
 logs
+staticfiles/
+samplepage.html

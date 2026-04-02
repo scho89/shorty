@@ -1,158 +1,88 @@
-<style>
-      
-      ul.cloud {
-        list-style: none;
-        padding-left: 0;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: center;
-        /* line-height: 2.75rem; */
-        width: 450px;
-        font-family: 'Arial', sans-serif;
-        padding: 0;
-        margin: 0;
-      }
-      
-      ul.cloud a {
-        /*   
-        Not supported by any browser at the moment :(
-        --size: attr(data-weight number); 
-        */
-        --size: 4;
-        --color: #a33;
-        color: var(--color);
-        font-size: calc(var(--size) * 0.2rem + 0.3rem);
-        display: block;
-        padding: 0.125rem 0.25rem;
-        position: relative;
-        text-decoration: none;
-        /* 
-        For different tones of a single color
-        opacity: calc((15 - (9 - var(--size))) / 15); 
-        */
-        opacity: calc((15 - (9 - var(--size))) / 15); 
-        border-radius: 0.25rem;
-        transition: all 0.3s ease;
-      }
+<div class="insights-grid">
+    <section class="insight-card insight-card-feature">
+        <div class="section-label">Top 3</div>
+        <h3>Most visited links</h3>
+        <p>The strongest performers across your current library.</p>
+        {% if top_links %}
+        <div class="leaderboard">
+            {% for item in top_links %}
+            <a class="leaderboard-item" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">
+                <span class="leaderboard-rank">#{{ item.rank }}</span>
+                <span class="leaderboard-main">
+                    <strong>{{ item.alias }}</strong>
+                    <span>{{ item.domain_name }}</span>
+                </span>
+                <span class="leaderboard-metric">{{ item.visit_counts }} visits</span>
+                <span class="hover-detail-panel">
+                    <span class="hover-detail-row">
+                        <strong>Destination</strong>
+                        <span class="hover-detail-value">{{ item.url }}</span>
+                    </span>
+                    <span class="hover-detail-row">
+                        <strong>Note</strong>
+                        <span class="hover-detail-value">{{ item.note }}</span>
+                    </span>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-card">No links yet. Your top performers will show up here.</div>
+        {% endif %}
+    </section>
 
+    <section class="insight-card">
+        <div class="section-label">7-Day Rise</div>
+        <h3>Fastest movers</h3>
+        <p>Links gaining momentum compared with the previous 7-day window.</p>
+        {% if rising_links %}
+        <div class="mini-list">
+            {% for item in rising_links %}
+            <a class="mini-list-item" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">
+                <span class="mini-list-copy">
+                    <strong>{{ item.alias }}</strong>
+                    <span>{{ item.recent_total }} this week, {{ item.previous_total }} last week</span>
+                </span>
+                <span class="mini-list-metric positive">+{{ item.delta }}</span>
+                <span class="hover-detail-panel">
+                    <span class="hover-detail-row">
+                        <strong>Destination</strong>
+                        <span class="hover-detail-value">{{ item.url }}</span>
+                    </span>
+                    <span class="hover-detail-row">
+                        <strong>Note</strong>
+                        <span class="hover-detail-value">{{ item.note }}</span>
+                    </span>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-card">Recent rise will appear after enough click history is collected over time.</div>
+        {% endif %}
+    </section>
 
-      {% for color in colors %}
-      ul.cloud a[data-weight="{{ forloop.counter }}"]:hover {
-        z-index:  100;
-        transform: scale(1.2);
-        background-color:{{ color }};
-        color: #ffffff;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
-        animation: vibration 0.1s infinite;
-        }
-      {% endfor %}
-
-      /*
-      ul.cloud a:hover {
-        transform: scale(1.1);
-        background-color: #3498db;
-        color: #ffffff;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        
-    }*/
-
-      {% for color in colors %}
-      ul.cloud a[data-weight="{{ forloop.counter }}"] { --size: {{ forloop.counter }}; --color:{{ color }} }
-      {% endfor %}
-
-
-
-      /*
-      ul.cloud li:nth-child(2n+1) a { --color: #181; }
-      ul.cloud li:nth-child(3n+1) a { --color: #33a; }
-      ul.cloud li:nth-child(4n+1) a { --color: #c38; }
-      */
-
-
-      ul.cloud a:focus {
-        outline: 1px dashed;
-      }
-
-
-      {% for color in colors %}
-      ul.cloud a[data-weight="{{ forloop.counter }}"]::before {      
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 50%;
-        width: 0;
-        height: 100%;
-        background: {{ color }};
-        transform: translate(-50%, 0);
-        opacity: 0.15;
-        transition: width 0.25s;
-       }
-      {% endfor %}
-
-      ul.cloud a::before {
-        /* ... Your existing styles ... */
-        transition: all 0.3s ease;
-    }
-
-    ul.cloud a:hover::before {
-      opacity: 0.25;
-  }
-      
-/*      
-      ul.cloud a::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 50%;
-        width: 0;
-        height: 100%;
-        background: var(--color);
-        transform: translate(-50%, 0);
-        opacity: 0.15;
-        transition: width 0.25s;
-      }*/
-
-      ul.cloud a:focus::before,
-      ul.cloud a:hover::before {
-        width: 100%;
-      }
-      
-      @media (prefers-reduced-motion) {
-        ul.cloud * {
-          transition: none !important;
-        }
-      }
-</style>
-
-<ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
-{% for wc in wc_data %}
-<li><a href="{{wc.url}}" data-weight="{{ wc.weight }}" title="{{ wc.short_url }}" target="_blank" rel="noopener noreferrer">{{ wc.alias }}</a></li>
-{% endfor %}
-</ul> 
-
-<!-- 
-<ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
-    <li><a data-weight="4" href="/tag/http">HTTP</a></li>
-    <li><a data-weight="2" href="/tag/ember">Ember</a></li>
-    <li><a data-weight="5" href="/tag/sass">Sass</a></li>
-    <li><a data-weight="8" href="/tag/html">HTML</a></li>
-    <li><a data-weight="6" href="/tag/flexbox">FlexBox</a></li>
-    <li><a data-weight="4" href="/tag/api">API</a></li>
-    <li><a data-weight="5" href="/tag/vuejs">VueJS</a></li>
-    <li><a data-weight="6" href="/tag/grid">Grid</a></li>
-    <li><a data-weight="3" href="/tag/rest">Rest</a></li>
-    <li><a data-weight="9" href="/tag/javascript">JavaScript</a></li>
-    <li><a data-weight="3" href="/tag/animation">Animation</a></li>
-    <li><a data-weight="7" href="/tag/react">React</a></li>
-    <li><a data-weight="8" href="/tag/css">CSS</a></li>
-    <li><a data-weight="1" href="/tag/cache">Cache</a></li>
-    <li><a data-weight="3" href="/tag/less">Less</a></li>
-  </ul> -->
-
-
-  {% block script %}
-
-  {% endblock %}
-
-
+    <section class="insight-card">
+        <div class="section-label">By Domain</div>
+        <h3>Domain pulse</h3>
+        <p>Compare traffic concentration across your branded hosts.</p>
+        {% if domain_trends %}
+        <div class="domain-bars">
+            {% for item in domain_trends %}
+            <div class="domain-bar-row">
+                <div class="domain-bar-copy">
+                    <strong>{{ item.domain_name }}</strong>
+                    <span>{{ item.links }} links</span>
+                </div>
+                <div class="domain-bar-track">
+                    <div class="domain-bar-fill" style="width: {{ item.share }}%;"></div>
+                </div>
+                <div class="domain-bar-metric">{{ item.visits }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-card">Domain traffic breakdown will appear once links start receiving visits.</div>
+        {% endif %}
+    </section>
+</div>

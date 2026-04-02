@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-grid">
+    <section class="app-header">
+        <div>
+            <div class="section-label">Help</div>
+            <h1>Domain setup guide</h1>
+            <p>Use this page when registering a new short-link domain and verifying ownership before it goes live.</p>
+        </div>
+    </section>
+
+    <section class="help-grid">
+        <div class="card">
+            <div class="section-label">Step 1</div>
+            <h2>Add a domain</h2>
+            <p>Open <a class="link-inline" href="{% url 'common:domain_list' %}">Domains</a>, enter the host you want to use, and submit it. Shorty will create a verification token for that domain.</p>
+            <ol class="help-list">
+                <li>Go to the <strong>Domains</strong> page.</li>
+                <li>Enter the host name you want to use, such as <code>t.example.com</code>.</li>
+                <li>Select <strong>Register domain</strong>.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <div class="section-label">Step 2</div>
+            <h2>Prove ownership</h2>
+            <p>After registration, Shorty shows a DNS TXT verification value in the domain registry. Add that exact value to your DNS zone and then run verification from the app.</p>
+            <ol class="help-list">
+                <li>Copy the TXT value shown in the <strong>Status</strong> column.</li>
+                <li>Create a DNS <code>TXT</code> record for the same host.</li>
+                <li>Wait for DNS propagation.</li>
+                <li>Select <strong>Verify</strong> in the domain registry.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <div class="section-label">Step 3</div>
+            <h2>Set the CNAME record</h2>
+            <p>The short-link host must also point to the current routing target below.</p>
+            <div class="code-block">
+                <div><strong>Record type</strong>: <code>CNAME</code></div>
+                <div><strong>Target</strong>: <code>{{ cname_target }}</code></div>
+            </div>
+            <p>Example: if the short domain is <code>t.example.com</code>, create a <code>CNAME</code> for <code>t</code> that points to <code>{{ cname_target }}</code>.</p>
+        </div>
+
+        <div class="card">
+            <div class="section-label">Checklist</div>
+            <h2>Before publishing links</h2>
+            <ul class="help-list">
+                <li>The domain is listed on the <strong>Domains</strong> page.</li>
+                <li>The TXT ownership record has been added.</li>
+                <li>The <code>CNAME</code> points to <code>{{ cname_target }}</code>.</li>
+                <li>The status shows <strong>Verified</strong>.</li>
+                <li>You can then create short links from the dashboard.</li>
+            </ul>
+        </div>
+    </section>
+</div>
+{% endblock %}
