@@ -8,8 +8,10 @@ logger = logging.getLogger('shorty')
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
 
-ALLOWED_HOSTS = list(dict.fromkeys(env.list('ALLOWED_HOSTS', default=[])))
+STATIC_ALLOWED_HOSTS = list(dict.fromkeys(env.list('ALLOWED_HOSTS', default=[])))
+ALLOWED_HOSTS = ['*']
 DEBUG = env.bool('DEBUG', default=False)
+DYNAMIC_ALLOWED_HOSTS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False)
 SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
@@ -34,7 +36,7 @@ try:
 
     row = cursor.fetchone()
     while row:
-        ALLOWED_HOSTS.append(row[0])
+        STATIC_ALLOWED_HOSTS.append(row[0])
         row = cursor.fetchone()
 
     conn.close()
@@ -43,14 +45,14 @@ except Exception as exc:
 
 if env.bool('ALLOW_LOCAL_HOSTS', default=False):
     for host in ['127.0.0.1', 'localhost']:
-        if host not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(host)
+        if host not in STATIC_ALLOWED_HOSTS:
+            STATIC_ALLOWED_HOSTS.append(host)
 
-ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
+STATIC_ALLOWED_HOSTS = list(dict.fromkeys(STATIC_ALLOWED_HOSTS))
 
 if not env.list('CSRF_TRUSTED_ORIGINS', default=[]):
     csrf_hosts = []
-    for host in ALLOWED_HOSTS:
+    for host in STATIC_ALLOWED_HOSTS:
         normalized = host.strip()
         if not normalized or normalized in {'127.0.0.1', 'localhost'}:
             continue

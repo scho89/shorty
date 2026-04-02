@@ -30,6 +30,7 @@ This project can run behind Caddy/HAProxy with SSL terminated at the proxy and D
 Optional:
 
 - `ALLOW_LOCAL_HOSTS=True` if you want `127.0.0.1` and `localhost` allowed in production for local checks
+- `DYNAMIC_ALLOWED_HOSTS_CACHE_SECONDS=5` to control how quickly newly verified domains are accepted without restarting Waitress
 
 ## Prepare the App
 

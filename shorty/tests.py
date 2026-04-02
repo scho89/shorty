@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -84,3 +84,46 @@ class CaddyAskTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertJSONEqual(response.content, {'status': 'denied', 'reason': 'missing domain'})
+
+
+class DynamicAllowedHostsTests(TestCase):
+    @override_settings(
+        ALLOWED_HOSTS=['*'],
+        STATIC_ALLOWED_HOSTS=['shorty.example.com'],
+        DYNAMIC_ALLOWED_HOSTS=True,
+        DYNAMIC_ALLOWED_HOSTS_CACHE_SECONDS=0,
+    )
+    def test_dynamic_host_allowed_domain_works_without_restart(self):
+        owner = User.objects.create_user(username='dynamic-owner', password='pw12345!')
+        domain = Domain.objects.create(
+            name='dynamic.example.com',
+            owner=owner,
+            is_verified=True,
+            host_allowed=True,
+        )
+        surl = Surl.objects.create(
+            alias='live',
+            url='https://example.org/live',
+            note='dynamic host',
+            domain=domain,
+            short_url='dynamic.example.com/live',
+        )
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': 'live'}),
+            HTTP_HOST='dynamic.example.com',
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://example.org/live')
+
+    @override_settings(
+        ALLOWED_HOSTS=['*'],
+        STATIC_ALLOWED_HOSTS=['shorty.example.com'],
+        DYNAMIC_ALLOWED_HOSTS=True,
+        DYNAMIC_ALLOWED_HOSTS_CACHE_SECONDS=0,
+    )
+    def test_dynamic_host_rejects_unknown_domain(self):
+        response = self.client.get('/', HTTP_HOST='unknown.example.com')
+
+        self.assertEqual(response.status_code, 400)

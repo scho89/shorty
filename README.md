@@ -116,6 +116,7 @@ python manage.py test common shorty
 | `SECRET_KEY` | Django 시크릿 키 |
 | `DEBUG` | 개발 모드 여부 (`True` / `False`) |
 | `ALLOWED_HOSTS` | 허용 호스트 목록 |
+| `DYNAMIC_ALLOWED_HOSTS_CACHE_SECONDS` | 운영에서 DB 기반 허용 도메인 캐시 시간(초) |
 | `RECAPTCHA_SITE_KEY` | Google reCAPTCHA 사이트 키 |
 | `RECAPTCHA_SECRET` | Google reCAPTCHA 시크릿 키 |
 | `SSL_LIST` | 인증 완료 도메인을 기록할 파일 경로 |
@@ -127,6 +128,7 @@ python manage.py test common shorty
 
 - 운영 배포 시 `DEBUG=False`를 사용하세요.
 - `ALLOWED_HOSTS`는 `*` 대신 실제 도메인만 지정하세요.
+- 운영에서는 `host_allowed=True` 인 도메인이 DB에서 자동 반영되어 재시작 없이 허용됩니다. 반영 주기는 `DYNAMIC_ALLOWED_HOSTS_CACHE_SECONDS`로 조절합니다.
 - `prod.py` 사용 시 DB 드라이버와 연결 정보를 먼저 준비하세요.
 - 로그는 기본적으로 `logs/mysite.log`에 기록됩니다.
 

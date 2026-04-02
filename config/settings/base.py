@@ -36,7 +36,10 @@ SSL_LIST = env('SSL_LIST', default='')
 DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
+STATIC_ALLOWED_HOSTS = list(ALLOWED_HOSTS)
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+DYNAMIC_ALLOWED_HOSTS = False
+DYNAMIC_ALLOWED_HOSTS_CACHE_SECONDS = env.int('DYNAMIC_ALLOWED_HOSTS_CACHE_SECONDS', default=5)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
@@ -72,6 +75,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'common.middleware.DynamicAllowedHostsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
