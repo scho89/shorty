@@ -86,4 +86,13 @@ class Surl(models.Model):
             return False
         except self.DoesNotExist:
             return True 
-            
+
+
+class ClickEvent(models.Model):
+    surl = models.ForeignKey(Surl, on_delete=models.CASCADE, related_name='click_events')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['surl', 'created_at'], name='shorty_click_surl_created_idx'),
+        ]

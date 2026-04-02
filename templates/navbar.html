@@ -7,10 +7,11 @@
         </span>
     </a>
     <div class="site-nav-links">
-        <a class="site-nav-link" href="{% url 'common:help' %}">Help</a>
         {% if user.is_authenticated %}
         <a class="site-nav-link" href="{% url 'common:url' %}">Dashboard</a>
+        <a class="site-nav-link" href="{% url 'common:links' %}">Links</a>
         <a class="site-nav-link" href="{% url 'common:domain_list' %}">Domains</a>
+        <a class="site-nav-link" href="{% url 'common:help' %}">Help</a>
         <a class="site-nav-pill" href="{% url 'common:logout' %}">{{ user.username }} / Logout</a>
         {% else %}
         <a class="site-nav-link" href="{% url 'common:login' %}">Login</a>

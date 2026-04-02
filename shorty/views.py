@@ -1,6 +1,6 @@
 from django.db.models import F
 from django.shortcuts import redirect
-from shorty.models import Surl
+from shorty.models import ClickEvent, Surl
 
 import logging
 
@@ -30,4 +30,5 @@ def surl(request,alias):
         return redirect('common:url')
 
     Surl.objects.filter(pk=surl.pk).update(visit_counts=F('visit_counts') + 1)
+    ClickEvent.objects.create(surl_id=surl.pk)
     return redirect(surl.url)

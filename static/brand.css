@@ -216,6 +216,12 @@ select {
     gap: 18px;
 }
 
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
 .help-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -466,7 +472,7 @@ select {
 
 .table-header {
     display: flex;
-    align-items: end;
+    align-items: start;
     justify-content: space-between;
     gap: 16px;
     padding: 28px 30px 14px;
@@ -475,6 +481,10 @@ select {
 .table-header-copy {
     display: grid;
     gap: 4px;
+}
+
+.library-controls {
+    padding: 0 30px 18px;
 }
 
 .table-meta {
@@ -492,16 +502,24 @@ select {
 .library-toolbar {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 12px;
-    flex-wrap: wrap;
 }
 
 .library-filter {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: grid;
+    gap: 14px;
+}
+
+.library-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.library-field {
+    display: grid;
+    gap: 8px;
 }
 
 .library-filter-label {
@@ -511,9 +529,19 @@ select {
 }
 
 .library-filter-select {
-    min-width: 190px;
     min-height: 42px;
     border-radius: 12px;
+    width: 100%;
+}
+
+.library-search-input {
+    min-height: 42px;
+    border-radius: 12px;
+    width: 100%;
+}
+
+.library-filter-button {
+    min-height: 42px;
 }
 
 .table-scroll {
@@ -651,6 +679,201 @@ select {
     align-items: center;
 }
 
+.insights-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 8px;
+}
+
+.insight-card {
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--surface-soft);
+    display: grid;
+    gap: 12px;
+}
+
+.insight-card h3 {
+    margin: 0;
+    letter-spacing: -0.03em;
+}
+
+.insight-card p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.insight-card-feature {
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.10), transparent 38%),
+        linear-gradient(180deg, #f8fbff, #eef5ff);
+}
+
+.leaderboard,
+.mini-list,
+.domain-bars {
+    display: grid;
+    gap: 10px;
+}
+
+.leaderboard-item,
+.mini-list-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: white;
+    border: 1px solid rgba(37, 99, 235, 0.10);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.leaderboard-item:hover,
+.mini-list-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(18, 32, 51, 0.06);
+}
+
+.hover-detail-panel {
+    position: absolute;
+    left: 50%;
+    width: min(320px, calc(100vw - 48px));
+    bottom: calc(100% + 10px);
+    z-index: 5;
+    display: grid;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.96);
+    color: white;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 6px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.hover-detail-panel::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    width: 12px;
+    height: 12px;
+    background: rgba(15, 23, 42, 0.96);
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.hover-detail-row {
+    display: grid;
+    gap: 4px;
+}
+
+.hover-detail-row strong {
+    color: #93c5fd;
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.hover-detail-value {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.leaderboard-item:hover .hover-detail-panel,
+.leaderboard-item:focus-visible .hover-detail-panel,
+.mini-list-item:hover .hover-detail-panel,
+.mini-list-item:focus-visible .hover-detail-panel {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.leaderboard-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.10);
+    color: var(--primary-strong);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.leaderboard-main,
+.mini-list-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.leaderboard-main strong,
+.mini-list-copy strong {
+    letter-spacing: -0.02em;
+}
+
+.leaderboard-main span,
+.mini-list-copy span {
+    color: var(--muted);
+    font-size: 0.84rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leaderboard-metric,
+.mini-list-metric,
+.domain-bar-metric {
+    color: var(--primary-strong);
+    font-size: 0.84rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mini-list-metric.positive {
+    color: var(--success);
+}
+
+.domain-bar-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(110px, 1.2fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.domain-bar-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.domain-bar-copy span {
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.domain-bar-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #dfe9f7;
+    overflow: hidden;
+}
+
+.domain-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #60a5fa, #2563eb);
+}
+
 .auth-shell {
     min-height: calc(100vh - 168px);
     display: grid;
@@ -739,6 +962,8 @@ select {
     .dashboard-layout,
     .field-row,
     .help-grid,
+    .insights-grid,
+    .quick-actions-grid,
     .dashboard-shell,
     .main-layout {
         grid-template-columns: 1fr;
@@ -754,9 +979,17 @@ select {
         flex-direction: column;
     }
 
+    .library-controls {
+        padding: 0 30px 16px;
+    }
+
     .library-toolbar {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .library-filter-grid {
+        grid-template-columns: 1fr;
     }
 
     .inline-actions {
@@ -783,6 +1016,10 @@ select {
 
     .table-header {
         padding: 24px 24px 10px;
+    }
+
+    .library-controls {
+        padding: 0 24px 14px;
     }
 
     .data-table th,

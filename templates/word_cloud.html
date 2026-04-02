@@ -1,46 +1,88 @@
-<style>
-    .cloud-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-        justify-content: center;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-    }
+<div class="insights-grid">
+    <section class="insight-card insight-card-feature">
+        <div class="section-label">Top 3</div>
+        <h3>Most visited links</h3>
+        <p>The strongest performers across your current library.</p>
+        {% if top_links %}
+        <div class="leaderboard">
+            {% for item in top_links %}
+            <a class="leaderboard-item" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">
+                <span class="leaderboard-rank">#{{ item.rank }}</span>
+                <span class="leaderboard-main">
+                    <strong>{{ item.alias }}</strong>
+                    <span>{{ item.domain_name }}</span>
+                </span>
+                <span class="leaderboard-metric">{{ item.visit_counts }} visits</span>
+                <span class="hover-detail-panel">
+                    <span class="hover-detail-row">
+                        <strong>Destination</strong>
+                        <span class="hover-detail-value">{{ item.url }}</span>
+                    </span>
+                    <span class="hover-detail-row">
+                        <strong>Note</strong>
+                        <span class="hover-detail-value">{{ item.note }}</span>
+                    </span>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-card">No links yet. Your top performers will show up here.</div>
+        {% endif %}
+    </section>
 
-    .cloud-list a {
-        --size: 4;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 38px;
-        padding: 0 14px;
-        border-radius: 999px;
-        font-size: calc(var(--size) * 0.14rem + 0.72rem);
-        background: #eff6ff;
-        color: #1d4ed8;
-        transition: transform 0.18s ease, background 0.18s ease;
-    }
+    <section class="insight-card">
+        <div class="section-label">7-Day Rise</div>
+        <h3>Fastest movers</h3>
+        <p>Links gaining momentum compared with the previous 7-day window.</p>
+        {% if rising_links %}
+        <div class="mini-list">
+            {% for item in rising_links %}
+            <a class="mini-list-item" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">
+                <span class="mini-list-copy">
+                    <strong>{{ item.alias }}</strong>
+                    <span>{{ item.recent_total }} this week, {{ item.previous_total }} last week</span>
+                </span>
+                <span class="mini-list-metric positive">+{{ item.delta }}</span>
+                <span class="hover-detail-panel">
+                    <span class="hover-detail-row">
+                        <strong>Destination</strong>
+                        <span class="hover-detail-value">{{ item.url }}</span>
+                    </span>
+                    <span class="hover-detail-row">
+                        <strong>Note</strong>
+                        <span class="hover-detail-value">{{ item.note }}</span>
+                    </span>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-card">Recent rise will appear after enough click history is collected over time.</div>
+        {% endif %}
+    </section>
 
-    .cloud-list a:hover {
-        transform: translateY(-1px);
-        background: #dbeafe;
-    }
-
-    {% for color in colors %}
-    .cloud-list a[data-weight="{{ forloop.counter }}"] {
-        --size: {{ forloop.counter }};
-        color: {{ color }};
-    }
-    {% endfor %}
-</style>
-
-<div class="cloud-wrap">
-    <ul class="cloud-list" role="navigation" aria-label="Short link cloud">
-    {% for wc in wc_data %}
-        <li><a href="{{ wc.url }}" data-weight="{{ wc.weight }}" title="{{ wc.short_url }}" target="_blank" rel="noopener noreferrer">{{ wc.alias }}</a></li>
-    {% endfor %}
-    </ul>
+    <section class="insight-card">
+        <div class="section-label">By Domain</div>
+        <h3>Domain pulse</h3>
+        <p>Compare traffic concentration across your branded hosts.</p>
+        {% if domain_trends %}
+        <div class="domain-bars">
+            {% for item in domain_trends %}
+            <div class="domain-bar-row">
+                <div class="domain-bar-copy">
+                    <strong>{{ item.domain_name }}</strong>
+                    <span>{{ item.links }} links</span>
+                </div>
+                <div class="domain-bar-track">
+                    <div class="domain-bar-fill" style="width: {{ item.share }}%;"></div>
+                </div>
+                <div class="domain-bar-metric">{{ item.visits }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-card">Domain traffic breakdown will appear once links start receiving visits.</div>
+        {% endif %}
+    </section>
 </div>

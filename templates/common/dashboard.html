@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-grid">
+    <section class="app-header">
+        <div>
+            <div class="section-label">Dashboard</div>
+            <h1>Traffic overview</h1>
+            <p>Track what is performing, what is rising, and which domains are carrying the most traffic.</p>
+        </div>
+    </section>
+
+    <section class="metrics-row">
+        <div class="stat-card">
+            <strong>{{ surls|length }}</strong>
+            <span>Tracked links</span>
+            <p>All active aliases in your workspace.</p>
+        </div>
+        <div class="stat-card">
+            <strong>{{ domains|length }}</strong>
+            <span>Verified domains</span>
+            <p>Domains available for new short links.</p>
+        </div>
+        <div class="stat-card">
+            <strong>{% if surls %}{{ surls.0.visit_counts }}{% else %}0{% endif %}</strong>
+            <span>Top visits</span>
+            <p>Best performing link based on stored clicks.</p>
+        </div>
+    </section>
+
+    <section class="dashboard-footer">
+        <div class="card word-cloud-card">
+            <div class="section-label">Traffic view</div>
+            <h2>Click activity</h2>
+            <p>Hover over cards to inspect the destination and note without leaving the dashboard.</p>
+            {% include 'word_cloud.html' %}
+        </div>
+    </section>
+
+    <section>
+        {% include "common/url_form.html" %}
+    </section>
+
+    <section class="quick-actions-grid">
+        <div class="card">
+            <div class="section-label">Next step</div>
+            <h2>Manage links</h2>
+            <p>Create new short URLs, filter by domain, and edit existing aliases from the dedicated links workspace.</p>
+            <div class="button-row">
+                <a class="button" href="{% url 'common:links' %}">Open links</a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-label">Domains</div>
+            <h2>Review host inventory</h2>
+            <p>Check verification state, DNS ownership status, and domain routing configuration in one place.</p>
+            <div class="button-row">
+                <a class="button-secondary" href="{% url 'common:domain_list' %}">Open domains</a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

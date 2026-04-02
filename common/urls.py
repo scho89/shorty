@@ -13,6 +13,7 @@ urlpatterns = [
     path('help/', views.help_page, name='help'),
     path('domain/', views.domain_list, name='domain_list'),
     path('url/', views.url, name='url'),
+    path('links/', views.links, name='links'),
     path('url/create/', views.url_create, name='url_create'),
     path('url/delete/<int:pk>', views.url_delete, name='url_delete'),
     path('url/edit/<int:pk>', views.url_edit, name='url_edit'),

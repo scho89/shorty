@@ -5,14 +5,15 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import connection
+from django.db.models import Count
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from common.forms import UserForm
 from shorty.forms import SurlForm,DomainForm
-from shorty.models import Domain,Surl
-from random import randint,shuffle
+from shorty.models import ClickEvent, Domain, Surl
 
 import json
 import logging
@@ -175,27 +176,54 @@ def url(request):
     if request.method == "GET":
         if request.user.is_authenticated:
             domains, surls = get_owned_objects(request)
-            selected_domain_id = (request.GET.get('domain') or '').strip()
-            if selected_domain_id:
-                surls = surls.filter(domain_id=selected_domain_id)
-            surls = surls.order_by('-visit_counts')
             form = SurlForm(user=request.user)
             context = build_url_context(
                 domains=domains,
                 surls=surls,
                 form=form,
-                selected_domain_id=selected_domain_id,
             )
-            return render(request,'common/url.html',context=context)    
+            return render(request,'common/dashboard.html',context=context)    
 
         else:
-            return render(request,'common/url.html')    
+            return render(request,'common/dashboard.html')    
+
+
+@login_required(login_url='common:login')
+def links(request):
+    if request.method == "GET":
+        domains, surls = get_owned_objects(request)
+        selected_domain_id = (request.GET.get('domain') or '').strip()
+        search_query = (request.GET.get('q') or '').strip()
+        if selected_domain_id:
+            surls = surls.filter(domain_id=selected_domain_id)
+        if search_query:
+            surls = surls.filter(
+                Q(alias__icontains=search_query)
+                | Q(url__icontains=search_query)
+                | Q(note__icontains=search_query)
+                | Q(short_url__icontains=search_query)
+                | Q(domain__name__icontains=search_query)
+            )
+        surls = surls.order_by('-visit_counts')
+        form = SurlForm(user=request.user)
+        context = build_url_context(
+            domains=domains,
+            surls=surls,
+            form=form,
+            selected_domain_id=selected_domain_id,
+            search_query=search_query,
+        )
+        return render(request, 'common/links.html', context=context)
+
+    return redirect('common:links')
 
 @login_required(login_url='common:login')
 @require_POST
 def url_create(request):
     if request.user.is_authenticated:
         form = SurlForm(request.POST, user=request.user)
+        redirect_target = request.POST.get('next') or 'common:links'
+        template_name = 'common/dashboard.html' if str(redirect_target).startswith('/_common_/url') else 'common/links.html'
         if form.is_valid():
             surl = form.save(commit=False)
             surl.domain = form.cleaned_data['domain']
@@ -207,13 +235,15 @@ def url_create(request):
             except ValidationError as e:
                 domains, surls = get_owned_objects(request)
                 context = build_url_context(domains=domains, surls=surls, form=form, e=e)
-                return render(request, 'common/url.html', context=context)
+                return render(request, template_name, context=context)
         else:
             domains, surls = get_owned_objects(request)
             context = build_url_context(domains=domains, surls=surls, form=form)
-            return render(request, 'common/url.html', context=context)
+            return render(request, template_name, context=context)
 
-        return redirect('common:url')
+        if redirect_target.startswith('/'):
+            return redirect(redirect_target)
+        return redirect(redirect_target)
 
     return HttpResponse('url created.')
 
@@ -224,7 +254,7 @@ def get_owned_objects(request):
     return domains, surls
 
 
-def build_url_context(domains, surls, form, selected_domain_id='', **extra):
+def build_url_context(domains, surls, form, selected_domain_id='', search_query='', **extra):
     domains = list(domains)
     surls = list(surls)
     domain_badge_styles = get_domain_badge_styles(domains)
@@ -235,15 +265,18 @@ def build_url_context(domains, surls, form, selected_domain_id='', **extra):
             'background:#eff6ff;color:#1d4ed8;'
         )
 
-    wc_data, colors = get_url_wc_data(surls)
+    insights = get_url_insights(surls)
 
     context = {
         'surls': surls,
         'domains': domains,
         'form': form,
-        'wc_data': wc_data,
-        'colors': colors,
+        'wc_data': insights['traffic_items'],
+        'top_links': insights['top_links'],
+        'rising_links': insights['rising_links'],
+        'domain_trends': insights['domain_trends'],
         'selected_domain_id': str(selected_domain_id or ''),
+        'search_query': search_query,
     }
     context.update(extra)
     return context
@@ -256,6 +289,139 @@ def get_domain_badge_styles(domains):
         styles[domain.name] = f'background:{background};color:{color};'
     return styles
 
+
+def get_url_insights(surls):
+    surls = list(surls)
+    top_links = build_top_links(surls)
+    domain_trends = build_domain_trends(surls)
+    rising_links = build_rising_links(surls)
+    traffic_items = build_traffic_items(top_links, rising_links, domain_trends)
+
+    return {
+        'top_links': top_links,
+        'rising_links': rising_links,
+        'domain_trends': domain_trends,
+        'traffic_items': traffic_items,
+    }
+
+
+def build_top_links(surls):
+    ranked = sorted(surls, key=lambda surl: (-surl.visit_counts, surl.alias.lower()))
+    return [
+        {
+            'rank': index,
+            'alias': surl.alias,
+            'short_url': surl.short_url,
+            'url': surl.url,
+            'note': surl.note or 'No note',
+            'visit_counts': surl.visit_counts,
+            'domain_name': surl.domain.name,
+        }
+        for index, surl in enumerate(ranked[:3], start=1)
+    ]
+
+
+def build_rising_links(surls):
+    surl_map = {surl.id: surl for surl in surls}
+    if not surl_map:
+        return []
+
+    now = timezone.now()
+    seven_days_ago = now - timedelta(days=7)
+    fourteen_days_ago = now - timedelta(days=14)
+
+    recent_counts = dict(
+        ClickEvent.objects.filter(surl_id__in=surl_map, created_at__gte=seven_days_ago)
+        .values('surl_id')
+        .annotate(total=Count('id'))
+        .values_list('surl_id', 'total')
+    )
+    previous_counts = dict(
+        ClickEvent.objects.filter(
+            surl_id__in=surl_map,
+            created_at__gte=fourteen_days_ago,
+            created_at__lt=seven_days_ago,
+        )
+        .values('surl_id')
+        .annotate(total=Count('id'))
+        .values_list('surl_id', 'total')
+    )
+
+    rising = []
+    for surl_id, surl in surl_map.items():
+        recent_total = recent_counts.get(surl_id, 0)
+        previous_total = previous_counts.get(surl_id, 0)
+        delta = recent_total - previous_total
+        if recent_total <= 0 or delta <= 0:
+            continue
+
+        rising.append({
+            'alias': surl.alias,
+            'short_url': surl.short_url,
+            'url': surl.url,
+            'note': surl.note or 'No note',
+            'domain_name': surl.domain.name,
+            'recent_total': recent_total,
+            'previous_total': previous_total,
+            'delta': delta,
+        })
+
+    rising.sort(key=lambda item: (-item['delta'], -item['recent_total'], item['alias'].lower()))
+    return rising[:5]
+
+
+def build_domain_trends(surls):
+    grouped = {}
+    for surl in surls:
+        bucket = grouped.setdefault(
+            surl.domain.name,
+            {'domain_name': surl.domain.name, 'links': 0, 'visits': 0},
+        )
+        bucket['links'] += 1
+        bucket['visits'] += surl.visit_counts
+
+    items = sorted(grouped.values(), key=lambda item: (-item['visits'], item['domain_name']))
+    max_visits = max((item['visits'] for item in items), default=0)
+    scale_base = max(max_visits, 1)
+
+    for item in items:
+        item['share'] = max(12, round(item['visits'] / scale_base * 100)) if items else 12
+
+    return items
+
+
+def build_traffic_items(top_links, rising_links, domain_trends):
+    items = []
+
+    for item in top_links:
+        items.append({
+            'label': f"#{item['rank']}",
+            'title': item['alias'],
+            'subtitle': item['domain_name'],
+            'metric': f"{item['visit_counts']} visits",
+            'url': item['url'],
+        })
+
+    for item in rising_links[:3]:
+        items.append({
+            'label': 'Up',
+            'title': item['alias'],
+            'subtitle': 'Last 7 days',
+            'metric': f"+{item['delta']} clicks",
+            'url': item['url'],
+        })
+
+    for item in domain_trends[:3]:
+        items.append({
+            'label': 'Domain',
+            'title': item['domain_name'],
+            'subtitle': f"{item['links']} links",
+            'metric': f"{item['visits']} visits",
+            'url': None,
+        })
+
+    return items[:12]
+
 @login_required(login_url='common:login')
 @require_POST
 def url_delete(request,pk):
@@ -266,9 +432,9 @@ def url_delete(request,pk):
             messages.success(request, f"URL {surl.short_url}이 삭제되었습니다.")
         else:
             messages.error(request, "내 소유의 주소만 삭제가 가능합니다.")
-            return render(request,'common/url.html')
+            return render(request,'common/links.html')
 
-    return redirect('common:url')
+    return redirect('common:links')
 
 @login_required(login_url='common:login')
 def url_edit(request,pk):
@@ -285,28 +451,28 @@ def url_edit(request,pk):
                         surl.validate_unique()
                         surl.save()
                         messages.success(request,f"URL {surl.short_url}이 변경되었습니다.")
-                        return redirect('common:url')
+                        return redirect('common:links')
                                         
                     except ValidationError as e:
                         domains, surls = get_owned_objects(request)
                         context = build_url_context(domains=domains, surls=surls, form=form, e=e, surl=surl)
                         messages.error(request,"중복된 주소가 존재합니다.")
-                        return render(request,'common/url.html',context=context)    
+                        return render(request,'common/links.html',context=context)    
                     
             else:
                 form = SurlForm(instance=surl, user=request.user)
                 domains, surls = get_owned_objects(request)
                 
                 context = build_url_context(domains=domains, surls=surls, form=form, surl=surl)
-                return render(request,'common/url.html',context=context)    
+                return render(request,'common/links.html',context=context)    
     
-            return redirect('common:url')
+            return redirect('common:links')
             
         else:
             messages.error(request,"내 소유의 주소만 편집이 가능합니다.")
-            return render(request,'common/url.html')    
+            return render(request,'common/links.html')    
 
-    return redirect('common:url')    
+    return redirect('common:links')    
 
 
 @login_required(login_url='common:login')
@@ -402,30 +568,28 @@ def page_not_found(request, exception):
 
 def get_url_wc_data(surls):
     wc_data = []
-    counts = []
     colors = []
-
-    for surl in surls:
-        counts.append(surl.visit_counts)
-
+    surls = list(surls)
+    counts = [surl.visit_counts for surl in surls]
     max_count = max(counts) if counts else 0
     scale_base = max(max_count, 1)
 
-    for surl in surls:
-        data = {}
-        data['alias'] = surl.alias
-        data['weight'] = round(surl.visit_counts / scale_base * 16) + 1
-        data['color'] = "#"+hex(randint(100,255))[2:]+hex(randint(100,255))[2:]+hex(randint(100,255))[2:]
-        data['short_url'] = surl.short_url
-        data['url']=surl.url
-        wc_data.append(data)
-        
-    for i in range(1,18):
-        colors.append("#"+hex(randint(50,255))[2:]+hex(randint(50,255))[2:]+hex(randint(50,255))[2:])
-    
-    shuffle(wc_data)
-    
-    return wc_data ,colors
+    ranked_surls = sorted(surls, key=lambda surl: (-surl.visit_counts, surl.alias.lower()))
+
+    for index, surl in enumerate(ranked_surls[:12], start=1):
+        weight = round(surl.visit_counts / scale_base * 16) + 1
+        wc_data.append({
+            'rank': index,
+            'alias': surl.alias,
+            'weight': weight,
+            'short_url': surl.short_url,
+            'url': surl.url,
+            'visit_counts': surl.visit_counts,
+            'domain_name': surl.domain.name,
+            'intensity': max(20, min(100, round(surl.visit_counts / scale_base * 100))),
+        })
+
+    return wc_data, colors
 
 def recaptcha_result(request):
     if recaptcha_is_bypassed():
