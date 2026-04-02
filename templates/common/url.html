@@ -49,7 +49,18 @@
                     <h2>All short links</h2>
                     <p>Review aliases, destinations, notes, and visit counts without leaving the page.</p>
                 </div>
-                <div class="table-meta">{{ surls|length }} total</div>
+                <div class="library-toolbar">
+                    <form method="get" action="{% url 'common:url' %}" class="library-filter">
+                        <label class="library-filter-label" for="library-domain">Domain</label>
+                        <select class="select library-filter-select" name="domain" id="library-domain" onchange="this.form.submit()">
+                            <option value="">All domains</option>
+                            {% for domain in domains %}
+                            <option value="{{ domain.id }}"{% if selected_domain_id == domain.id|stringformat:'s' %} selected{% endif %}>{{ domain.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    <div class="table-meta">{{ surls|length }} total</div>
+                </div>
             </div>
             <div class="table-scroll">
                 <table class="data-table">
@@ -65,7 +76,7 @@
                     <tbody>
                     {% for surl in surls %}
                         <tr>
-                            <td><span class="chip">{{ surl.short_url }}</span></td>
+                            <td><span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span></td>
                             <td>{{ surl.visit_counts }}</td>
                             <td><a class="link-muted" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></td>
                             <td>{{ surl.note|default:"-" }}</td>

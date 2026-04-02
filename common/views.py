@@ -24,6 +24,16 @@ from urllib.error import URLError
 
 logger=logging.getLogger('shorty')
 SSL_LIST = getattr(settings, 'SSL_LIST', '')
+DOMAIN_BADGE_PALETTE = [
+    ('#eff6ff', '#1d4ed8'),
+    ('#ecfdf3', '#138a52'),
+    ('#fff7ed', '#c27a12'),
+    ('#fdf2f8', '#be185d'),
+    ('#f5f3ff', '#6d28d9'),
+    ('#eef2ff', '#4338ca'),
+    ('#ecfeff', '#0f766e'),
+    ('#fff1f2', '#be123c'),
+]
 
 
 # Create your views here.
@@ -164,15 +174,18 @@ def domain_list(request):
 def url(request):
     if request.method == "GET":
         if request.user.is_authenticated:
-            domains,surls = get_owned_objects(request)
-            surls=surls.order_by('-visit_counts')
+            domains, surls = get_owned_objects(request)
+            selected_domain_id = (request.GET.get('domain') or '').strip()
+            if selected_domain_id:
+                surls = surls.filter(domain_id=selected_domain_id)
+            surls = surls.order_by('-visit_counts')
             form = SurlForm(user=request.user)
-            
-            
-            # get wc data
-            wc_data, colors = get_url_wc_data(surls)
-                                    
-            context = {'surls':surls,'domains':domains, 'form':form, 'wc_data':wc_data, 'colors':colors}
+            context = build_url_context(
+                domains=domains,
+                surls=surls,
+                form=form,
+                selected_domain_id=selected_domain_id,
+            )
             return render(request,'common/url.html',context=context)    
 
         else:
@@ -193,11 +206,11 @@ def url_create(request):
                 messages.success(request, f"URL {surl.short_url}이 등록되었습니다.")
             except ValidationError as e:
                 domains, surls = get_owned_objects(request)
-                context = {'surls': surls, 'domains': domains, 'form': form, 'e': e}
+                context = build_url_context(domains=domains, surls=surls, form=form, e=e)
                 return render(request, 'common/url.html', context=context)
         else:
             domains, surls = get_owned_objects(request)
-            context = {'surls': surls, 'domains': domains, 'form': form}
+            context = build_url_context(domains=domains, surls=surls, form=form)
             return render(request, 'common/url.html', context=context)
 
         return redirect('common:url')
@@ -209,6 +222,39 @@ def get_owned_objects(request):
     surls = Surl.objects.filter(domain__in=domains)
     surls = surls.order_by('-visit_counts')
     return domains, surls
+
+
+def build_url_context(domains, surls, form, selected_domain_id='', **extra):
+    domains = list(domains)
+    surls = list(surls)
+    domain_badge_styles = get_domain_badge_styles(domains)
+
+    for surl in surls:
+        surl.domain_badge_style = domain_badge_styles.get(
+            surl.domain.name,
+            'background:#eff6ff;color:#1d4ed8;'
+        )
+
+    wc_data, colors = get_url_wc_data(surls)
+
+    context = {
+        'surls': surls,
+        'domains': domains,
+        'form': form,
+        'wc_data': wc_data,
+        'colors': colors,
+        'selected_domain_id': str(selected_domain_id or ''),
+    }
+    context.update(extra)
+    return context
+
+
+def get_domain_badge_styles(domains):
+    styles = {}
+    for index, domain in enumerate(domains):
+        background, color = DOMAIN_BADGE_PALETTE[index % len(DOMAIN_BADGE_PALETTE)]
+        styles[domain.name] = f'background:{background};color:{color};'
+    return styles
 
 @login_required(login_url='common:login')
 @require_POST
@@ -243,7 +289,7 @@ def url_edit(request,pk):
                                         
                     except ValidationError as e:
                         domains, surls = get_owned_objects(request)
-                        context = {'surls':surls,'domains':domains, 'form':form, 'e':e, 'surl':surl}
+                        context = build_url_context(domains=domains, surls=surls, form=form, e=e, surl=surl)
                         messages.error(request,"중복된 주소가 존재합니다.")
                         return render(request,'common/url.html',context=context)    
                     
@@ -251,8 +297,7 @@ def url_edit(request,pk):
                 form = SurlForm(instance=surl, user=request.user)
                 domains, surls = get_owned_objects(request)
                 
-                wc_data, colors = get_url_wc_data(surls)
-                context = {'surls':surls,'domains':domains, 'form':form, 'surl':surl, 'wc_data':wc_data, 'colors':colors}
+                context = build_url_context(domains=domains, surls=surls, form=form, surl=surl)
                 return render(request,'common/url.html',context=context)    
     
             return redirect('common:url')

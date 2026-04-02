@@ -489,6 +489,33 @@ select {
     font-weight: 600;
 }
 
+.library-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.library-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.library-filter-label {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.library-filter-select {
+    min-width: 190px;
+    min-height: 42px;
+    border-radius: 12px;
+}
+
 .table-scroll {
     overflow-x: auto;
 }
@@ -551,6 +578,13 @@ select {
     background: #eff6ff;
     color: var(--primary-strong);
     font-weight: 600;
+}
+
+.domain-chip {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .status-chip.success {
@@ -718,6 +752,11 @@ select {
     .table-header {
         align-items: start;
         flex-direction: column;
+    }
+
+    .library-toolbar {
+        width: 100%;
+        justify-content: space-between;
     }
 
     .inline-actions {
