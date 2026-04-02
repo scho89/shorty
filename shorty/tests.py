@@ -47,3 +47,40 @@ class RedirectTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, 'https://example.org/fast')
         self.assertEqual(surl.visit_counts, 1)
+
+
+class CaddyAskTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username='caddy-owner', password='pw12345!')
+
+    def test_caddy_ask_allows_host_allowed_domain(self):
+        Domain.objects.create(
+            name='allowed.example.com',
+            owner=self.owner,
+            is_verified=True,
+            host_allowed=True,
+        )
+
+        response = self.client.get('/_caddy/ask', {'domain': 'allowed.example.com'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(response.content, {'status': 'ok', 'domain': 'allowed.example.com'})
+
+    def test_caddy_ask_denies_unapproved_domain(self):
+        Domain.objects.create(
+            name='blocked.example.com',
+            owner=self.owner,
+            is_verified=True,
+            host_allowed=False,
+        )
+
+        response = self.client.get('/_caddy/ask', {'domain': 'blocked.example.com'})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertJSONEqual(response.content, {'status': 'denied', 'domain': 'blocked.example.com'})
+
+    def test_caddy_ask_requires_domain_query_param(self):
+        response = self.client.get('/_caddy/ask')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertJSONEqual(response.content, {'status': 'denied', 'reason': 'missing domain'})

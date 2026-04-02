@@ -36,6 +36,22 @@ SSL_LIST = env('SSL_LIST', default='')
 DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+if not CSRF_TRUSTED_ORIGINS:
+    csrf_hosts = []
+    for host in ALLOWED_HOSTS:
+        normalized = host.strip()
+        if not normalized or normalized in {'127.0.0.1', 'localhost'}:
+            continue
+        if normalized.startswith('.'):
+            normalized = normalized.lstrip('.')
+        if ':' in normalized:
+            continue
+        csrf_hosts.append(f'https://{normalized}')
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(csrf_hosts))
 
 
 # Application definition
@@ -53,6 +69,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -128,7 +145,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]

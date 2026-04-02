@@ -15,10 +15,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from common import views as common_views
 
 
 urlpatterns = [
     path('_django_admin_/', admin.site.urls),
+    path('_healthz/', common_views.healthz, name='healthz'),
+    path('_caddy/ask', common_views.caddy_ask, name='caddy-ask'),
     path('_common_/', include('common.urls')),
     path('', include('shorty.urls')),
 ]

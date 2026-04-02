@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import connection
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -113,6 +115,31 @@ def signup(request):
 
 def page_not_found(request, exception):
     return render(request, 'common/404.html', {})
+
+def healthz(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+        db_status = 'ok'
+        status_code = 200
+    except Exception as exc:
+        db_status = f'error: {exc}'
+        status_code = 503
+
+    return JsonResponse({'status': 'ok' if status_code == 200 else 'degraded', 'db': db_status}, status=status_code)
+
+
+def caddy_ask(request):
+    domain = (request.GET.get('domain') or '').strip().lower().rstrip('.')
+    if not domain:
+        return JsonResponse({'status': 'denied', 'reason': 'missing domain'}, status=400)
+
+    allowed = Domain.objects.filter(name__iexact=domain, host_allowed=True).exists()
+    if not allowed:
+        return JsonResponse({'status': 'denied', 'domain': domain}, status=403)
+
+    return JsonResponse({'status': 'ok', 'domain': domain}, status=200)
 
 @login_required(login_url='common:login')
 def domain_list(request):
