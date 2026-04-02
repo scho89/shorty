@@ -74,3 +74,15 @@ Example NSSM target:
 - Program: `powershell.exe`
 - Arguments: `-ExecutionPolicy Bypass -File C:\GitHub\shorty\scripts\start-waitress.ps1`
 - Startup directory: `C:\GitHub\shorty`
+
+Or use the helper script in this repo:
+
+```powershell
+.\scripts\install-waitress-service.ps1 -ServiceName ShortyWaitress -StartService
+```
+
+If NSSM is not on `PATH`, pass its location explicitly:
+
+```powershell
+.\scripts\install-waitress-service.ps1 -NssmPath C:\nssm\win64\nssm.exe -StartService
+```
