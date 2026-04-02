@@ -1,43 +1,30 @@
-<div class="container">
-    <h5 class="my-3 border-bottom pb-2">Domain 등록</h5>
-    <form method="post" action="{% url 'common:domain_create'%}">
+<div class="card">
+    <div class="section-label">Domain setup</div>
+    <h2>Add domain</h2>
+    <p>Register a branded domain and verify ownership before using it for short links.</p>
+    <form method="post" action="{% url 'common:domain_create'%}" class="form-stack">
         {% csrf_token %}
-
-        <!-- 오류 표시 -->
         {% if form.errors %}
-        <div class="alert alert-danger" role="alert">
-        {% for field in form %}
-            {% if field.errors %}
-                <div>
-                    <strong> {{ field.label }} </strong>
-                    {{ field.errors }}
-                </div>
-            {% endif %}
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if e %}
-        <div class="alert alert-danger" role="alert">
-            <div class="mb-1">
-                <strong> {{ e.messages.0 }} </strong>
-           </div>
+        <div class="alert-box">
+            {% for field in form %}
+                {% if field.errors %}
+                <div><strong>{{ field.label }}</strong> {{ field.errors }}</div>
+                {% endif %}
+            {% endfor %}
         </div>
-    {% endif %}
-
-    {% if err %}
-        <div class="alert alert-danger" role="alert">
-            <div class="mb-1">
-                <strong> {{ err }} </strong>
-           </div>
+        {% endif %}
+        {% if e %}
+        <div class="alert-box"><strong>{{ e.messages.0 }}</strong></div>
+        {% endif %}
+        {% if err %}
+        <div class="alert-box"><strong>{{ err }}</strong></div>
+        {% endif %}
+        <div class="field-group">
+            <label for="name">Domain name</label>
+            <input class="input" type="text" name="name" id="name" value="{{ form.domain.value|default_if_none:'' }}" placeholder="brand.example.com">
         </div>
-    {% endif %}
-
-    <!-- 오류 표시 End-->
-
-    <div class="input-group mb-3 w-50">
-        <input type="text" class="form-control" name="name" id="name" value="{{ form.domain.value|default_if_none:'' }}" placeholder="example.com">
-    </div>
-        <button class="btn btn-primary" type="submit">저장하기</button>
+        <div class="button-row">
+            <button class="button" type="submit">Register domain</button>
+        </div>
     </form>
 </div>

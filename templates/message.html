@@ -1,19 +1,16 @@
-<div class="container my-3">
-{% for message in messages %}
-
-    <div class="alert {{ message.tags }} alert-auto-dismissible alert-dismissible notification-container" role="alert">
-        <!-- <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button> -->
+{% if messages %}
+<div class="flash-stack">
+    {% for message in messages %}
+    <div class="flash-message alert-auto-dismissible">
         {{ message }}
     </div>
-{% endfor %}
+    {% endfor %}
 </div>
-
 <script>
-    window.setTimeout(function() {
-        $(".alert-auto-dismissible").fadeTo(500, 0).slideUp(500, function(){
-            $(this).remove();
+    window.setTimeout(function () {
+        document.querySelectorAll(".alert-auto-dismissible").forEach(function (el) {
+            el.remove();
         });
     }, 4000);
 </script>
+{% endif %}

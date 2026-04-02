@@ -1,158 +1,46 @@
 <style>
-      
-      ul.cloud {
-        list-style: none;
-        padding-left: 0;
+    .cloud-list {
         display: flex;
         flex-wrap: wrap;
+        gap: 10px;
         align-items: center;
         justify-content: center;
-        /* line-height: 2.75rem; */
-        width: 450px;
-        font-family: 'Arial', sans-serif;
-        padding: 0;
         margin: 0;
-      }
-      
-      ul.cloud a {
-        /*   
-        Not supported by any browser at the moment :(
-        --size: attr(data-weight number); 
-        */
-        --size: 4;
-        --color: #a33;
-        color: var(--color);
-        font-size: calc(var(--size) * 0.2rem + 0.3rem);
-        display: block;
-        padding: 0.125rem 0.25rem;
-        position: relative;
-        text-decoration: none;
-        /* 
-        For different tones of a single color
-        opacity: calc((15 - (9 - var(--size))) / 15); 
-        */
-        opacity: calc((15 - (9 - var(--size))) / 15); 
-        border-radius: 0.25rem;
-        transition: all 0.3s ease;
-      }
-
-
-      {% for color in colors %}
-      ul.cloud a[data-weight="{{ forloop.counter }}"]:hover {
-        z-index:  100;
-        transform: scale(1.2);
-        background-color:{{ color }};
-        color: #ffffff;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
-        animation: vibration 0.1s infinite;
-        }
-      {% endfor %}
-
-      /*
-      ul.cloud a:hover {
-        transform: scale(1.1);
-        background-color: #3498db;
-        color: #ffffff;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        
-    }*/
-
-      {% for color in colors %}
-      ul.cloud a[data-weight="{{ forloop.counter }}"] { --size: {{ forloop.counter }}; --color:{{ color }} }
-      {% endfor %}
-
-
-
-      /*
-      ul.cloud li:nth-child(2n+1) a { --color: #181; }
-      ul.cloud li:nth-child(3n+1) a { --color: #33a; }
-      ul.cloud li:nth-child(4n+1) a { --color: #c38; }
-      */
-
-
-      ul.cloud a:focus {
-        outline: 1px dashed;
-      }
-
-
-      {% for color in colors %}
-      ul.cloud a[data-weight="{{ forloop.counter }}"]::before {      
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 50%;
-        width: 0;
-        height: 100%;
-        background: {{ color }};
-        transform: translate(-50%, 0);
-        opacity: 0.15;
-        transition: width 0.25s;
-       }
-      {% endfor %}
-
-      ul.cloud a::before {
-        /* ... Your existing styles ... */
-        transition: all 0.3s ease;
+        padding: 0;
+        list-style: none;
     }
 
-    ul.cloud a:hover::before {
-      opacity: 0.25;
-  }
-      
-/*      
-      ul.cloud a::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 50%;
-        width: 0;
-        height: 100%;
-        background: var(--color);
-        transform: translate(-50%, 0);
-        opacity: 0.15;
-        transition: width 0.25s;
-      }*/
+    .cloud-list a {
+        --size: 4;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 14px;
+        border-radius: 999px;
+        font-size: calc(var(--size) * 0.14rem + 0.72rem);
+        background: #eff6ff;
+        color: #1d4ed8;
+        transition: transform 0.18s ease, background 0.18s ease;
+    }
 
-      ul.cloud a:focus::before,
-      ul.cloud a:hover::before {
-        width: 100%;
-      }
-      
-      @media (prefers-reduced-motion) {
-        ul.cloud * {
-          transition: none !important;
-        }
-      }
+    .cloud-list a:hover {
+        transform: translateY(-1px);
+        background: #dbeafe;
+    }
+
+    {% for color in colors %}
+    .cloud-list a[data-weight="{{ forloop.counter }}"] {
+        --size: {{ forloop.counter }};
+        color: {{ color }};
+    }
+    {% endfor %}
 </style>
 
-<ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
-{% for wc in wc_data %}
-<li><a href="{{wc.url}}" data-weight="{{ wc.weight }}" title="{{ wc.short_url }}" target="_blank" rel="noopener noreferrer">{{ wc.alias }}</a></li>
-{% endfor %}
-</ul> 
-
-<!-- 
-<ul class="cloud" role="navigation" aria-label="Webdev tag cloud">
-    <li><a data-weight="4" href="/tag/http">HTTP</a></li>
-    <li><a data-weight="2" href="/tag/ember">Ember</a></li>
-    <li><a data-weight="5" href="/tag/sass">Sass</a></li>
-    <li><a data-weight="8" href="/tag/html">HTML</a></li>
-    <li><a data-weight="6" href="/tag/flexbox">FlexBox</a></li>
-    <li><a data-weight="4" href="/tag/api">API</a></li>
-    <li><a data-weight="5" href="/tag/vuejs">VueJS</a></li>
-    <li><a data-weight="6" href="/tag/grid">Grid</a></li>
-    <li><a data-weight="3" href="/tag/rest">Rest</a></li>
-    <li><a data-weight="9" href="/tag/javascript">JavaScript</a></li>
-    <li><a data-weight="3" href="/tag/animation">Animation</a></li>
-    <li><a data-weight="7" href="/tag/react">React</a></li>
-    <li><a data-weight="8" href="/tag/css">CSS</a></li>
-    <li><a data-weight="1" href="/tag/cache">Cache</a></li>
-    <li><a data-weight="3" href="/tag/less">Less</a></li>
-  </ul> -->
-
-
-  {% block script %}
-
-  {% endblock %}
-
-
+<div class="cloud-wrap">
+    <ul class="cloud-list" role="navigation" aria-label="Short link cloud">
+    {% for wc in wc_data %}
+        <li><a href="{{ wc.url }}" data-weight="{{ wc.weight }}" title="{{ wc.short_url }}" target="_blank" rel="noopener noreferrer">{{ wc.alias }}</a></li>
+    {% endfor %}
+    </ul>
+</div>

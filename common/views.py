@@ -114,7 +114,7 @@ def signup(request):
 
 
 def page_not_found(request, exception):
-    return render(request, 'common/404.html', {})
+    return render(request, 'common/404.html', {}, status=404)
 
 def healthz(request):
     try:
@@ -140,6 +140,13 @@ def caddy_ask(request):
         return JsonResponse({'status': 'denied', 'domain': domain}, status=403)
 
     return JsonResponse({'status': 'ok', 'domain': domain}, status=200)
+
+
+def help_page(request):
+    context = {
+        'cname_target': '443.scho.kr',
+    }
+    return render(request, 'common/help.html', context)
 
 @login_required(login_url='common:login')
 def domain_list(request):
@@ -346,7 +353,7 @@ def domain_delete(request, pk):
     return redirect('common:domain_list')
 
 def page_not_found(request, exception):
-    return render(request, 'common/404.html', {})
+    return render(request, 'common/404.html', {}, status=404)
 
 def get_url_wc_data(surls):
     wc_data = []

@@ -1,88 +1,95 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="page-grid">
+    <section class="app-header">
+        <div>
+            <div class="section-label">Dashboard</div>
+            <h1>Short links</h1>
+            <p>Create and manage short links from one clean workspace.</p>
+        </div>
+    </section>
 
-<div class="container my-3">
-    <div class="row">
-      <div class="col">
+    <section class="metrics-row">
+        <div class="stat-card">
+            <strong>{{ surls|length }}</strong>
+            <span>Tracked links</span>
+            <p>All active aliases in your workspace.</p>
+        </div>
+        <div class="stat-card">
+            <strong>{{ domains|length }}</strong>
+            <span>Verified domains</span>
+            <p>Domains available for new short links.</p>
+        </div>
+        <div class="stat-card">
+            <strong>{% if surls %}{{ surls.0.visit_counts }}{% else %}0{% endif %}</strong>
+            <span>Top visits</span>
+            <p>Best performing link based on stored clicks.</p>
+        </div>
+    </section>
+
+    <section>
         {% include "common/url_form.html" %}
-      </div>
-      <div class="col">
-        <div class="my-5">
-        {% include 'word_cloud.html' %}
+    </section>
+
+    <section class="dashboard-footer">
+        <div class="card word-cloud-card">
+            <div class="section-label">Traffic view</div>
+            <h2>Click activity</h2>
+            <p>A quick visual read on which aliases are getting the most attention.</p>
+            {% include 'word_cloud.html' %}
         </div>
-        </div>
-    </div>
-</div>
+    </section>
 
-
-
-
-
-
-<div class="container my-3">
-
-            <table class="table table-hover table-bordered">
-                <thead>
-                    <tr>
-                        <th scope="col" class="text-center">Short URL</th>
-                        <th scope="col" class="text-center">Visit counts</th>
-                        <th scope="col" class="text-center">URL</th>
-                        <th scope="col" class="text-center">Note</th>
-                        <th scope="col" class="text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for surl in surls %}
-                <tr>
-                <td>{{ surl.short_url }}</td>
-                <td class="text-end">{{ surl.visit_counts }}</td>
-                <td style="word-break:break-all"><a href="{{ surl.url }}" class="link-secondary" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></td>
-                <td>{{ surl.note }}</td>
-                <td class="text-center">
-
-                                <a class="btn btn-secondary btn-sm" href="{% url 'common:url_edit' pk=surl.id %}">수정</a>
-                                <form method="post" action="{% url 'common:url_delete' pk=surl.id %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button class="btn btn-danger btn-sm" type="submit">삭제</button>
-                                </form>
-                </td>
-                </tr>
-                {% endfor %}
-                </tbody>
+    <section>
+        <div class="table-card">
+            <div class="table-header">
+                <div class="table-header-copy">
+                    <div class="section-label">Library</div>
+                    <h2>All short links</h2>
+                    <p>Review aliases, destinations, notes, and visit counts without leaving the page.</p>
+                </div>
+                <div class="table-meta">{{ surls|length }} total</div>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Short URL</th>
+                            <th>Visits</th>
+                            <th>Destination</th>
+                            <th>Note</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for surl in surls %}
+                        <tr>
+                            <td><span class="chip">{{ surl.short_url }}</span></td>
+                            <td>{{ surl.visit_counts }}</td>
+                            <td><a class="link-muted" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></td>
+                            <td>{{ surl.note|default:"-" }}</td>
+                            <td class="action-cell">
+                                <div class="inline-actions">
+                                    <a class="button-secondary" href="{% url 'common:url_edit' pk=surl.id %}">Edit</a>
+                                    <form class="inline-action-form" method="post" action="{% url 'common:url_delete' pk=surl.id %}">
+                                        {% csrf_token %}
+                                        <button class="button-danger" type="submit" onclick="return confirm('Delete this short link?');">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
                 </table>
-
+            </div>
+        </div>
+    </section>
 </div>
-
-   
-
-
-{% endblock %}
-{% block script %}
-<script type="text/javascript">
-    const page_elements = document.getElementsByClassName("page-link");
-    Array.from(page_elements).forEach(function(element) {
-        element.addEventListener("click", function(){
-        document.getElementById("page").value = this.dataset.page;
-        document.getElementById("searchForm").submit();
-        });
-    });
-
-    const btn_search = document.getElementById("btn_search");
-    btn_search.addEventListener("click", function() {
-        document.getElementById('kw').value = document.getElementById("search_kw").value;
-        document.getElementById("page").value = 1;
-        document.getElementById("searchForm").submit();
-    });
-
-    const inputbox_search_kw = document.getElementById("search_kw");
-    inputbox_search_kw.addEventListener("keypress", function(e) {
-        if(e.keyCode == 13){
-            document.getElementById('kw').value = document.getElementById("search_kw").value;
-            document.getElementById("page").value = 1;
-            document.getElementById("searchForm").submit();
-            }
-    });
-
-</script>
 {% endblock %}
