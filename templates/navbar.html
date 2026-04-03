@@ -13,11 +13,34 @@
         <a class="site-nav-link" href="{% url 'common:domain_list' %}">Domains</a>
         <a class="site-nav-link" href="{% url 'common:help' %}">Help</a>
         <details class="nav-menu">
-            <summary class="site-nav-pill nav-menu-toggle">
-                <span>{{ user.username }}</span>
+            <summary class="nav-menu-toggle">
+                <span class="nav-menu-avatar">{{ user.username|first|upper }}</span>
+                <span class="nav-menu-copy">
+                    <strong class="nav-menu-label">{{ user.username }}</strong>
+                    <span class="nav-menu-meta">
+                        {% if user.email %}
+                        {{ user.email }}
+                        {% else %}
+                        Account menu
+                        {% endif %}
+                    </span>
+                </span>
                 <span class="nav-menu-caret" aria-hidden="true">&#9662;</span>
             </summary>
             <div class="nav-menu-panel">
+                <div class="nav-menu-panel-header">
+                    <span class="nav-menu-avatar nav-menu-avatar-panel">{{ user.username|first|upper }}</span>
+                    <span class="nav-menu-copy">
+                        <strong class="nav-menu-label">{{ user.username }}</strong>
+                        <span class="nav-menu-meta">
+                            {% if user.email %}
+                            {{ user.email }}
+                            {% else %}
+                            Signed in
+                            {% endif %}
+                        </span>
+                    </span>
+                </div>
                 <a class="nav-menu-item" href="{% url 'common:account_settings' %}">Account settings</a>
                 <form method="post" action="{% url 'common:logout' %}" class="nav-menu-form">
                     {% csrf_token %}
