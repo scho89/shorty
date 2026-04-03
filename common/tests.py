@@ -84,12 +84,30 @@ class AuthRecaptchaTests(TestCase):
                 'password1': 'ComplexPass123!',
                 'password2': 'ComplexPass123!',
                 'email': 'debug@example.com',
+                'privacy_consent': 'on',
             },
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(User.objects.filter(username='debug-user').exists())
+
+    @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')
+    def test_signup_requires_privacy_consent(self):
+        response = self.client.post(
+            reverse('common:signup'),
+            {
+                'username': 'debug-user-no-consent',
+                'password1': 'ComplexPass123!',
+                'password2': 'ComplexPass123!',
+                'email': 'debug@example.com',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username='debug-user-no-consent').exists())
+        self.assertContains(response, 'You must agree to the privacy notice')
 
     @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')
     def test_login_allows_debug_flow_without_recaptcha(self):
@@ -106,3 +124,46 @@ class AuthRecaptchaTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context['user'].is_authenticated)
+
+
+class AccountSettingsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='account-user',
+            password='ComplexPass123!',
+            email='before@example.com',
+        )
+
+    def test_account_settings_updates_email(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('common:account_settings'),
+            {
+                'action': 'email',
+                'email': 'after@example.com',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'after@example.com')
+
+    def test_password_change_uses_django_builtin_form_on_account_page(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('common:account_settings'),
+            {
+                'action': 'password',
+                'password-old_password': 'ComplexPass123!',
+                'password-new_password1': 'EvenBetterPass456!',
+                'password-new_password2': 'EvenBetterPass456!',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('EvenBetterPass456!'))

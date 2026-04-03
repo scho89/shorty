@@ -1,8 +1,10 @@
 from datetime import timedelta
 from django.conf import settings 
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.core.exceptions import ValidationError
 from django.db import connection
 from django.db.models import Count
@@ -11,7 +13,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from common.forms import UserForm
+from common.forms import AccountUpdateForm, UserForm
 from shorty.forms import SurlForm,DomainForm
 from shorty.models import ClickEvent, Domain, Surl
 
@@ -38,6 +40,13 @@ DOMAIN_BADGE_PALETTE = [
 
 
 # Create your views here.
+def style_form_fields(form):
+    for field in form.fields.values():
+        existing_classes = field.widget.attrs.get('class', '')
+        field.widget.attrs['class'] = (f'{existing_classes} input').strip()
+    return form
+
+
 def recaptcha_is_bypassed():
     return settings.DEBUG or 'test' in sys.argv
 
@@ -158,6 +167,40 @@ def help_page(request):
         'cname_target': '443.scho.kr',
     }
     return render(request, 'common/help.html', context)
+
+
+@login_required(login_url='common:login')
+def account_settings(request):
+    email_form = AccountUpdateForm(instance=request.user)
+    password_form = style_form_fields(PasswordChangeForm(user=request.user, prefix='password'))
+
+    if request.method == "POST":
+        action = request.POST.get('action')
+
+        if action == 'email':
+            email_form = AccountUpdateForm(request.POST, instance=request.user)
+            if email_form.is_valid():
+                email_form.save()
+                messages.success(request, 'Email updated.')
+                return redirect('common:account_settings')
+            password_form = style_form_fields(PasswordChangeForm(user=request.user, prefix='password'))
+
+        elif action == 'password':
+            email_form = AccountUpdateForm(instance=request.user)
+            password_form = style_form_fields(
+                PasswordChangeForm(user=request.user, data=request.POST, prefix='password')
+            )
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Password updated.')
+                return redirect('common:account_settings')
+
+    context = {
+        'email_form': email_form,
+        'password_form': password_form,
+    }
+    return render(request, 'common/account_settings.html', context)
 
 @login_required(login_url='common:login')
 def domain_list(request):

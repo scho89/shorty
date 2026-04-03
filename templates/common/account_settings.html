@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-card account-card">
+        <div class="section-label">Account</div>
+        <h1 class="auth-title">Account settings</h1>
+        <p>Manage your email address and password in one place.</p>
+
+        <div class="account-settings-grid">
+            <section class="account-settings-panel">
+                <div class="account-settings-heading">
+                    <h2>Email</h2>
+                    <p>Keep your contact address up to date.</p>
+                </div>
+                <form method="post" class="form-stack">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="email">
+                    {% include "form_errors.html" with form=email_form %}
+                    <div class="field-group">
+                        <label for="id_username">Username</label>
+                        <input class="input" type="text" id="id_username" value="{{ request.user.username }}" disabled>
+                    </div>
+                    <div class="field-group">
+                        <label for="id_email">Email</label>
+                        <input class="input" type="email" name="email" id="id_email" value="{{ email_form.email.value|default_if_none:'' }}" placeholder="you@example.com">
+                    </div>
+                    <div class="button-row">
+                        <button class="button" type="submit">Save email</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="account-settings-panel">
+                <div class="account-settings-heading">
+                    <h2>Password</h2>
+                    <p>Use Django's built-in password change flow without leaving this page.</p>
+                </div>
+                <form method="post" class="form-stack">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="password">
+                    {% include "form_errors.html" with form=password_form %}
+                    <div class="field-group">
+                        <label for="{{ password_form.old_password.id_for_label }}">Current password</label>
+                        {{ password_form.old_password }}
+                    </div>
+                    <div class="field-group">
+                        <label for="{{ password_form.new_password1.id_for_label }}">New password</label>
+                        {{ password_form.new_password1 }}
+                    </div>
+                    <div class="field-group">
+                        <label for="{{ password_form.new_password2.id_for_label }}">Confirm new password</label>
+                        {{ password_form.new_password2 }}
+                    </div>
+                    <div class="button-row">
+                        <button class="button" type="submit">Save password</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}

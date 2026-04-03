@@ -27,6 +27,19 @@
                 <label for="email">Email</label>
                 <input class="input" type="text" name="email" id="email" value="{{ form.email.value|default_if_none:'' }}" placeholder="you@example.com">
             </div>
+            <div class="consent-card">
+                <h2>Privacy notice</h2>
+                <ul class="consent-list">
+                    <li><strong>Collected information:</strong> username, email address, and encrypted password.</li>
+                    <li><strong>Purpose:</strong> account creation, login, account security, and service-related notices.</li>
+                    <li><strong>Retention period:</strong> kept while your account is active and deleted or anonymized within a reasonable period after account removal unless retention is required by law.</li>
+                    <li><strong>Sharing:</strong> not provided to third parties except when required for legal compliance or essential service operation.</li>
+                </ul>
+                <label class="checkbox-field" for="privacy_consent">
+                    <input type="checkbox" name="privacy_consent" id="privacy_consent" {% if form.privacy_consent.value %}checked{% endif %}>
+                    <span>I have read the privacy notice and agree to the collection and use of my personal information.</span>
+                </label>
+            </div>
             {% if recaptcha_enabled %}
             <div class="field-group">
                 <label>reCAPTCHA</label>

@@ -16,6 +16,52 @@
         {% include "message.html" %}
         {% block content %}{% endblock %}
     </div>
+    <script>
+        (function () {
+            var menus = Array.prototype.slice.call(document.querySelectorAll('.nav-menu'));
+            if (!menus.length) {
+                return;
+            }
+
+            function closeMenu(menu) {
+                menu.removeAttribute('open');
+            }
+
+            function closeAll(exceptMenu) {
+                menus.forEach(function (menu) {
+                    if (menu !== exceptMenu && menu.hasAttribute('open')) {
+                        closeMenu(menu);
+                    }
+                });
+            }
+
+            document.addEventListener('pointerdown', function (event) {
+                var clickedInsideMenu = menus.find(function (menu) {
+                    return menu.contains(event.target);
+                });
+
+                if (!clickedInsideMenu) {
+                    closeAll(null);
+                }
+            }, true);
+
+            menus.forEach(function (menu) {
+                menu.addEventListener('toggle', function () {
+                    if (menu.open) {
+                        closeAll(menu);
+                    }
+                });
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key !== 'Escape') {
+                    return;
+                }
+
+                closeAll(null);
+            });
+        }());
+    </script>
     {% block script %}{% endblock %}
 </body>
 </html>
