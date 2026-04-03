@@ -34,6 +34,10 @@
                 <button class="button" type="submit">Login</button>
                 <a class="button-secondary" href="{% url 'common:signup' %}">Create account</a>
             </div>
+            <div class="support-actions">
+                <a class="link-inline" href="{% url 'common:username_reminder_request' %}">Forgot your username?</a>
+                <a class="link-inline" href="{% url 'common:password_reset_request' %}">Forgot your password?</a>
+            </div>
         </form>
     </div>
 </section>

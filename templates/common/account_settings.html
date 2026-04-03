@@ -13,24 +13,51 @@
             <section class="account-settings-panel">
                 <div class="account-settings-heading">
                     <h2>Email</h2>
-                    <p>Keep your contact address up to date.</p>
+                    <p>Send a verification code to your new address before applying the change.</p>
+                </div>
+                <div class="account-status-card">
+                    <span class="account-status-label">Current email</span>
+                    <strong>{{ request.user.email|default:"No email added yet" }}</strong>
+                    <p>Username: {{ request.user.username }}</p>
                 </div>
                 <form method="post" class="form-stack">
                     {% csrf_token %}
-                    <input type="hidden" name="action" value="email">
-                    {% include "form_errors.html" with form=email_form %}
+                    <input type="hidden" name="action" value="email_request">
+                    {% include "form_errors.html" with form=email_request_form %}
                     <div class="field-group">
                         <label for="id_username">Username</label>
                         <input class="input" type="text" id="id_username" value="{{ request.user.username }}" disabled>
                     </div>
                     <div class="field-group">
-                        <label for="id_email">Email</label>
-                        <input class="input" type="email" name="email" id="id_email" value="{{ email_form.email.value|default_if_none:'' }}" placeholder="you@example.com">
+                        <label for="{{ email_request_form.new_email.id_for_label }}">New email</label>
+                        {{ email_request_form.new_email }}
+                        <div class="helptext">A 6-digit verification code will be sent to this address.</div>
                     </div>
                     <div class="button-row">
-                        <button class="button" type="submit">Save email</button>
+                        <button class="button" type="submit">Send verification code</button>
                     </div>
                 </form>
+
+                {% if pending_email_change %}
+                <div class="account-subsection">
+                    <div class="account-settings-heading">
+                        <h3>Verify new email</h3>
+                        <p>Enter the code sent to {{ pending_email_change.email }}.</p>
+                    </div>
+                    <form method="post" class="form-stack">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="email_verify">
+                        {% include "form_errors.html" with form=email_verify_form %}
+                        <div class="field-group">
+                            <label for="{{ email_verify_form.verification_code.id_for_label }}">Verification code</label>
+                            {{ email_verify_form.verification_code }}
+                        </div>
+                        <div class="button-row">
+                            <button class="button" type="submit">Verify and update email</button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
             </section>
 
             <section class="account-settings-panel">

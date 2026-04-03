@@ -1,8 +1,15 @@
+from django.core import mail
+from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from common.views import get_url_wc_data
+from common.views import (
+    EMAIL_CHANGE_CODE_PREFIX,
+    PASSWORD_RESET_CODE_PREFIX,
+    build_verification_cache_key,
+    get_url_wc_data,
+)
 from shorty.models import Domain, Surl
 
 
@@ -128,20 +135,37 @@ class AuthRecaptchaTests(TestCase):
 
 class AccountSettingsTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username='account-user',
             password='ComplexPass123!',
             email='before@example.com',
         )
 
-    def test_account_settings_updates_email(self):
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_account_settings_updates_email_after_verification(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
             reverse('common:account_settings'),
             {
-                'action': 'email',
-                'email': 'after@example.com',
+                'action': 'email_request',
+                'new_email': 'after@example.com',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = cache.get(build_verification_cache_key(EMAIL_CHANGE_CODE_PREFIX, self.user.pk))
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload['email'], 'after@example.com')
+        self.assertEqual(len(mail.outbox), 1)
+
+        response = self.client.post(
+            reverse('common:account_settings'),
+            {
+                'action': 'email_verify',
+                'email_verify-verification_code': payload['code'],
             },
             follow=True,
         )
@@ -167,3 +191,65 @@ class AccountSettingsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('EvenBetterPass456!'))
+
+
+class PasswordResetFlowTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            username='reset-user',
+            password='ComplexPass123!',
+            email='reset@example.com',
+        )
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_password_reset_uses_email_verification_code(self):
+        response = self.client.post(
+            reverse('common:password_reset_request'),
+            {
+                'email': 'reset@example.com',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        payload = cache.get(build_verification_cache_key(PASSWORD_RESET_CODE_PREFIX, 'reset@example.com'))
+        self.assertIsNotNone(payload)
+
+        response = self.client.post(
+            reverse('common:password_reset_verify'),
+            {
+                'verification_code': payload['code'],
+                'new_password1': 'NewComplexPass456!',
+                'new_password2': 'NewComplexPass456!',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('NewComplexPass456!'))
+
+
+class UsernameReminderTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='reminder-user',
+            password='ComplexPass123!',
+            email='reminder@example.com',
+        )
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_username_reminder_sends_username_by_email(self):
+        response = self.client.post(
+            reverse('common:username_reminder_request'),
+            {
+                'email': 'reminder@example.com',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('reminder-user', mail.outbox[0].body)

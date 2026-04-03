@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import SetPasswordForm, UserCreationForm
 from django.contrib.auth.models import User
 
 
@@ -24,3 +24,23 @@ class AccountUpdateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ("email",)
+
+
+class EmailChangeRequestForm(forms.Form):
+    new_email = forms.EmailField(label='New email')
+
+
+class EmailChangeVerifyForm(forms.Form):
+    verification_code = forms.CharField(label='Verification code', max_length=6)
+
+
+class PasswordResetRequestForm(forms.Form):
+    email = forms.EmailField(label='Email')
+
+
+class PasswordResetVerifyForm(SetPasswordForm):
+    verification_code = forms.CharField(label='Verification code', max_length=6)
+
+
+class UsernameReminderRequestForm(forms.Form):
+    email = forms.EmailField(label='Email')

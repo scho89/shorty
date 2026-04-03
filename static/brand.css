@@ -1108,6 +1108,49 @@ select {
     background: var(--surface-soft);
 }
 
+.account-status-card,
+.account-subsection {
+    display: grid;
+    gap: 6px;
+    padding: 16px 18px;
+    border: 1px solid rgba(37, 99, 235, 0.14);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.84);
+}
+
+.account-status-card {
+    margin: 0 0 18px;
+}
+
+.account-status-card strong {
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.account-status-card p,
+.account-subsection p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.account-status-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.account-subsection {
+    margin-top: 18px;
+}
+
+.account-subsection h3 {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
 .account-settings-heading {
     display: grid;
     gap: 4px;
@@ -1207,6 +1250,14 @@ select {
 .link-inline {
     color: var(--primary-strong);
     font-weight: 600;
+}
+
+.support-actions {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
 }
 
 @media (max-width: 980px) {

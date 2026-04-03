@@ -1,11 +1,14 @@
 from datetime import timedelta
 from django.conf import settings 
+from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.db import connection
 from django.db.models import Count
 from django.db.models import Q
@@ -13,12 +16,20 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from common.forms import AccountUpdateForm, UserForm
+from common.forms import (
+    EmailChangeRequestForm,
+    EmailChangeVerifyForm,
+    PasswordResetRequestForm,
+    PasswordResetVerifyForm,
+    UsernameReminderRequestForm,
+    UserForm,
+)
 from shorty.forms import SurlForm,DomainForm
 from shorty.models import ClickEvent, Domain, Surl
 
 import json
 import logging
+import secrets
 import sys
 import urllib.parse
 import urllib.request
@@ -38,6 +49,11 @@ DOMAIN_BADGE_PALETTE = [
     ('#fff1f2', '#be123c'),
 ]
 
+User = get_user_model()
+PASSWORD_RESET_CODE_PREFIX = 'password-reset-code'
+EMAIL_CHANGE_CODE_PREFIX = 'email-change-code'
+PASSWORD_RESET_SESSION_KEY = 'password_reset_email'
+
 
 # Create your views here.
 def style_form_fields(form):
@@ -45,6 +61,110 @@ def style_form_fields(form):
         existing_classes = field.widget.attrs.get('class', '')
         field.widget.attrs['class'] = (f'{existing_classes} input').strip()
     return form
+
+
+def normalize_email(value):
+    return (value or '').strip().lower()
+
+
+def build_verification_cache_key(prefix, identifier):
+    return f'{prefix}:{identifier}'
+
+
+def generate_verification_code():
+    return f'{secrets.randbelow(1000000):06d}'
+
+
+def store_verification_code(prefix, identifier, payload):
+    cache.set(
+        build_verification_cache_key(prefix, identifier),
+        payload,
+        timeout=settings.ACCOUNT_VERIFICATION_CODE_TTL,
+    )
+
+
+def get_verification_code(prefix, identifier):
+    return cache.get(build_verification_cache_key(prefix, identifier))
+
+
+def clear_verification_code(prefix, identifier):
+    cache.delete(build_verification_cache_key(prefix, identifier))
+
+
+def send_verification_email(recipient, subject, intro, code):
+    send_mail(
+        subject=subject,
+        message=f'{intro}\n\nVerification code: {code}\n\nThis code expires in {settings.ACCOUNT_VERIFICATION_CODE_TTL // 60} minutes.',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[recipient],
+        fail_silently=False,
+    )
+
+
+def send_username_reminder_email(recipient, usernames):
+    username_lines = '\n'.join(f'- {username}' for username in usernames)
+    send_mail(
+        subject='Shorty username reminder',
+        message=(
+            'The following Shorty username(s) are registered with this email address:\n\n'
+            f'{username_lines}\n\n'
+            'If you did not request this email, you can ignore it.'
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[recipient],
+        fail_silently=False,
+    )
+
+
+def dispatch_verification_email(recipient, subject, intro, code):
+    try:
+        send_verification_email(recipient, subject, intro, code)
+        return True
+    except Exception:
+        logger.exception('Failed to send verification email to %s', recipient)
+        return False
+
+
+def dispatch_username_reminder_email(recipient, usernames):
+    try:
+        send_username_reminder_email(recipient, usernames)
+        return True
+    except Exception:
+        logger.exception('Failed to send username reminder email to %s', recipient)
+        return False
+
+
+def get_password_reset_user(email):
+    return User.objects.filter(email__iexact=email).order_by('pk').first()
+
+
+def get_users_by_email(email):
+    return list(User.objects.filter(email__iexact=email).order_by('username'))
+
+
+def get_pending_email_change(user):
+    return get_verification_code(EMAIL_CHANGE_CODE_PREFIX, user.pk)
+
+
+def build_password_reset_forms(request):
+    request_form = style_form_fields(PasswordResetRequestForm())
+    verify_form = None
+    pending_email = request.session.get(PASSWORD_RESET_SESSION_KEY)
+    pending_reset = None
+
+    if pending_email:
+        pending_reset = get_verification_code(PASSWORD_RESET_CODE_PREFIX, normalize_email(pending_email))
+        if pending_reset:
+            verify_form = style_form_fields(
+                PasswordResetVerifyForm(
+                    user=User.objects.get(pk=pending_reset['user_id']),
+                )
+            )
+        else:
+            request.session.pop(PASSWORD_RESET_SESSION_KEY, None)
+            pending_email = None
+
+    return request_form, verify_form, pending_email
 
 
 def recaptcha_is_bypassed():
@@ -133,6 +253,25 @@ def signup(request):
     return render(request, 'common/signup.html', {'form': form, **get_recaptcha_context()})
 
 
+def username_reminder_request(request):
+    form = style_form_fields(UsernameReminderRequestForm())
+
+    if request.method == 'POST':
+        form = style_form_fields(UsernameReminderRequestForm(request.POST))
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            users = get_users_by_email(email)
+            if users:
+                usernames = [user.username for user in users]
+                if not dispatch_username_reminder_email(email, usernames):
+                    form.add_error(None, 'We could not send the reminder email. Check your email settings and try again.')
+                    return render(request, 'common/username_reminder_request.html', {'form': form})
+            messages.success(request, 'If an account matches that email, the username reminder has been sent.')
+            return redirect('common:login')
+
+    return render(request, 'common/username_reminder_request.html', {'form': form})
+
+
 def page_not_found(request, exception):
     return render(request, 'common/404.html', {}, status=404)
 
@@ -171,22 +310,68 @@ def help_page(request):
 
 @login_required(login_url='common:login')
 def account_settings(request):
-    email_form = AccountUpdateForm(instance=request.user)
+    email_request_form = style_form_fields(
+        EmailChangeRequestForm(initial={'new_email': request.user.email})
+    )
+    email_verify_form = style_form_fields(EmailChangeVerifyForm(prefix='email_verify'))
     password_form = style_form_fields(PasswordChangeForm(user=request.user, prefix='password'))
+    pending_email_change = get_pending_email_change(request.user)
 
     if request.method == "POST":
         action = request.POST.get('action')
 
-        if action == 'email':
-            email_form = AccountUpdateForm(request.POST, instance=request.user)
-            if email_form.is_valid():
-                email_form.save()
-                messages.success(request, 'Email updated.')
-                return redirect('common:account_settings')
+        if action == 'email_request':
+            email_request_form = style_form_fields(EmailChangeRequestForm(request.POST))
+            if email_request_form.is_valid():
+                new_email = email_request_form.cleaned_data['new_email']
+                if normalize_email(new_email) == normalize_email(request.user.email):
+                    email_request_form.add_error('new_email', 'Enter a different email address.')
+                elif User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+                    email_request_form.add_error('new_email', 'This email address is already in use.')
+                else:
+                    code = generate_verification_code()
+                    if dispatch_verification_email(
+                        new_email,
+                        'Shorty email change verification code',
+                        'Use this code to confirm your new Shorty email address.',
+                        code,
+                    ):
+                        store_verification_code(
+                            EMAIL_CHANGE_CODE_PREFIX,
+                            request.user.pk,
+                            {'email': new_email, 'code': code},
+                        )
+                        messages.success(request, 'A verification code was sent to your new email address.')
+                        return redirect('common:account_settings')
+                    email_request_form.add_error(None, 'We could not send the verification email. Check your email settings and try again.')
+            email_verify_form = style_form_fields(EmailChangeVerifyForm(prefix='email_verify'))
+            password_form = style_form_fields(PasswordChangeForm(user=request.user, prefix='password'))
+
+        elif action == 'email_verify':
+            email_verify_form = style_form_fields(EmailChangeVerifyForm(request.POST, prefix='email_verify'))
+            pending_email_change = get_pending_email_change(request.user)
+            if not pending_email_change:
+                messages.error(request, 'Your email verification code expired. Request a new code.')
+            elif email_verify_form.is_valid():
+                submitted_code = email_verify_form.cleaned_data['verification_code']
+                if submitted_code != pending_email_change['code']:
+                    email_verify_form.add_error('verification_code', 'Enter the correct verification code.')
+                else:
+                    request.user.email = pending_email_change['email']
+                    request.user.save(update_fields=['email'])
+                    clear_verification_code(EMAIL_CHANGE_CODE_PREFIX, request.user.pk)
+                    messages.success(request, 'Email updated.')
+                    return redirect('common:account_settings')
+            email_request_form = style_form_fields(
+                EmailChangeRequestForm(initial={'new_email': pending_email_change['email'] if pending_email_change else request.user.email})
+            )
             password_form = style_form_fields(PasswordChangeForm(user=request.user, prefix='password'))
 
         elif action == 'password':
-            email_form = AccountUpdateForm(instance=request.user)
+            email_request_form = style_form_fields(
+                EmailChangeRequestForm(initial={'new_email': request.user.email})
+            )
+            email_verify_form = style_form_fields(EmailChangeVerifyForm(prefix='email_verify'))
             password_form = style_form_fields(
                 PasswordChangeForm(user=request.user, data=request.POST, prefix='password')
             )
@@ -196,11 +381,88 @@ def account_settings(request):
                 messages.success(request, 'Password updated.')
                 return redirect('common:account_settings')
 
+        pending_email_change = get_pending_email_change(request.user)
+
     context = {
-        'email_form': email_form,
+        'email_request_form': email_request_form,
+        'email_verify_form': email_verify_form,
         'password_form': password_form,
+        'pending_email_change': pending_email_change,
     }
     return render(request, 'common/account_settings.html', context)
+
+
+def password_reset_request(request):
+    request_form, _, pending_email = build_password_reset_forms(request)
+
+    if request.method == 'POST':
+        request_form = style_form_fields(PasswordResetRequestForm(request.POST))
+        if request_form.is_valid():
+            email = request_form.cleaned_data['email']
+            user = get_password_reset_user(email)
+            if user and user.has_usable_password():
+                code = generate_verification_code()
+                normalized_email = normalize_email(email)
+                if dispatch_verification_email(
+                    email,
+                    'Shorty password reset verification code',
+                    'Use this code to reset your Shorty password.',
+                    code,
+                ):
+                    store_verification_code(
+                        PASSWORD_RESET_CODE_PREFIX,
+                        normalized_email,
+                        {'user_id': user.pk, 'code': code},
+                    )
+                    request.session[PASSWORD_RESET_SESSION_KEY] = normalized_email
+                else:
+                    request_form.add_error(None, 'We could not send the reset email. Check your email settings and try again.')
+                    return render(request, 'common/password_reset_request.html', {'request_form': request_form, 'pending_reset_email': pending_email})
+            else:
+                request.session[PASSWORD_RESET_SESSION_KEY] = normalize_email(email)
+            messages.success(request, 'If an account matches that email, a verification code has been sent.')
+            return redirect('common:password_reset_verify')
+
+    context = {
+        'request_form': request_form,
+        'pending_reset_email': pending_email,
+    }
+    return render(request, 'common/password_reset_request.html', context)
+
+
+def password_reset_verify(request):
+    request_form, verify_form, pending_email = build_password_reset_forms(request)
+
+    if not pending_email:
+        messages.info(request, 'Start by requesting a password reset code.')
+        return redirect('common:password_reset_request')
+
+    pending_reset = get_verification_code(PASSWORD_RESET_CODE_PREFIX, normalize_email(pending_email))
+    if not pending_reset:
+        messages.error(request, 'Your password reset code expired. Request a new code.')
+        return redirect('common:password_reset_request')
+
+    reset_user = User.objects.get(pk=pending_reset['user_id'])
+
+    if request.method == 'POST':
+        verify_form = style_form_fields(PasswordResetVerifyForm(user=reset_user, data=request.POST))
+        if verify_form.is_valid():
+            submitted_code = verify_form.cleaned_data['verification_code']
+            if submitted_code != pending_reset['code']:
+                verify_form.add_error('verification_code', 'Enter the correct verification code.')
+            else:
+                verify_form.save()
+                clear_verification_code(PASSWORD_RESET_CODE_PREFIX, normalize_email(pending_email))
+                request.session.pop(PASSWORD_RESET_SESSION_KEY, None)
+                messages.success(request, 'Your password has been reset. Sign in with your new password.')
+                return redirect('common:login')
+
+    context = {
+        'request_form': request_form,
+        'verify_form': verify_form,
+        'pending_reset_email': pending_email,
+    }
+    return render(request, 'common/password_reset_verify.html', context)
 
 @login_required(login_url='common:login')
 def domain_list(request):

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-card">
+        <div class="section-label">Username reminder</div>
+        <h1 class="auth-title">Find your username</h1>
+        <p>Enter your email address and we'll send the matching Shorty username to that inbox.</p>
+
+        <form method="post" class="form-stack">
+            {% csrf_token %}
+            {% include "form_errors.html" with form=form %}
+            <div class="field-group">
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+            </div>
+            <div class="button-row">
+                <button class="button" type="submit">Send username reminder</button>
+                <a class="button-secondary" href="{% url 'common:login' %}">Back to login</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
