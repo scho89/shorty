@@ -1,11 +1,13 @@
 from unittest.mock import patch
+from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from shorty.models import Domain, Surl
+from shorty.models import ClickEvent, Domain, Surl
 
 
 class DomainVerificationTests(TestCase):
@@ -26,6 +28,9 @@ class DomainVerificationTests(TestCase):
 
 
 class RedirectTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     def test_redirect_increments_visit_count_and_redirects(self):
         owner = User.objects.create_user(username='redirect-owner', password='pw12345!')
         domain = Domain.objects.create(name='redirect.example.com', owner=owner, is_verified=True)
@@ -41,12 +46,88 @@ class RedirectTests(TestCase):
         response = self.client.get(
             reverse('shorty:alias', kwargs={'alias': 'fast'}),
             HTTP_HOST='redirect.example.com',
+            HTTP_REFERER='https://referrer.example.com/article',
+            HTTP_USER_AGENT='Mozilla/5.0 Chrome/123.0',
         )
 
         surl.refresh_from_db()
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, 'https://example.org/fast')
         self.assertEqual(surl.visit_counts, 1)
+        event = ClickEvent.objects.get(surl=surl)
+        self.assertEqual(event.referrer, 'referrer.example.com/article')
+        self.assertEqual(event.browser, 'Chrome')
+
+    @override_settings(CLICK_EVENT_RETENTION_DAYS=14)
+    def test_redirect_cleans_up_old_click_events(self):
+        owner = User.objects.create_user(username='cleanup-owner', password='pw12345!')
+        domain = Domain.objects.create(name='cleanup.example.com', owner=owner, is_verified=True)
+        surl = Surl.objects.create(
+            alias='fresh',
+            url='https://example.org/fresh',
+            note='cleanup test',
+            domain=domain,
+            short_url='cleanup.example.com/fresh',
+        )
+        old_event = ClickEvent.objects.create(surl=surl, referrer='old.example.com', browser='Chrome')
+        ClickEvent.objects.filter(pk=old_event.pk).update(
+            created_at=timezone.now() - timedelta(days=15)
+        )
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': 'fresh'}),
+            HTTP_HOST='cleanup.example.com',
+            HTTP_REFERER='https://new.example.com/path?q=1',
+            HTTP_USER_AGENT='Mozilla/5.0 Chrome/123.0',
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(ClickEvent.objects.filter(pk=old_event.pk).exists())
+        self.assertTrue(ClickEvent.objects.filter(surl=surl, referrer='new.example.com/path').exists())
+
+    def test_disabled_link_returns_403_without_tracking(self):
+        owner = User.objects.create_user(username='disabled-owner', password='pw12345!')
+        domain = Domain.objects.create(name='disabled.example.com', owner=owner, is_verified=True)
+        surl = Surl.objects.create(
+            alias='off',
+            url='https://example.org/off',
+            note='disabled link',
+            domain=domain,
+            short_url='disabled.example.com/off',
+            is_active=False,
+        )
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': 'off'}),
+            HTTP_HOST='disabled.example.com',
+        )
+
+        surl.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(surl.visit_counts, 0)
+        self.assertFalse(ClickEvent.objects.filter(surl=surl).exists())
+
+    def test_expired_link_returns_410_without_tracking(self):
+        owner = User.objects.create_user(username='expired-owner', password='pw12345!')
+        domain = Domain.objects.create(name='expired.example.com', owner=owner, is_verified=True)
+        surl = Surl.objects.create(
+            alias='gone',
+            url='https://example.org/gone',
+            note='expired link',
+            domain=domain,
+            short_url='expired.example.com/gone',
+            expires_at=timezone.now() - timedelta(minutes=5),
+        )
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': 'gone'}),
+            HTTP_HOST='expired.example.com',
+        )
+
+        surl.refresh_from_db()
+        self.assertEqual(response.status_code, 410)
+        self.assertEqual(surl.visit_counts, 0)
+        self.assertFalse(ClickEvent.objects.filter(surl=surl).exists())
 
 
 class CaddyAskTests(TestCase):

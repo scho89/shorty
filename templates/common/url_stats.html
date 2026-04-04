@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-grid">
+    <section class="app-header">
+        <div>
+            <div class="section-label">Link stats</div>
+            <h1>{{ surl.alias }}</h1>
+            <p>Track recent traffic, top referrers, browser mix, and quick QR access for <strong>{{ surl.short_url }}</strong>.</p>
+        </div>
+        <div class="button-row">
+            <a class="button-secondary" href="{% url 'common:links' %}">Back to links</a>
+            <a class="button" href="{% url 'common:url_qr_code' pk=surl.id %}" target="_blank" rel="noopener noreferrer">Open QR</a>
+        </div>
+    </section>
+
+    <section class="metrics-row">
+        <div class="stat-card">
+            <strong>{{ surl.visit_counts }}</strong>
+            <span>Total visits</span>
+            <p>Stored click count for this alias.</p>
+        </div>
+        <div class="stat-card">
+            <strong>{% if surl.expires_at %}{{ surl.expires_at|date:"Y-m-d" }}{% else %}None{% endif %}</strong>
+            <span>Expiry</span>
+            <p>{% if surl.expires_at %}Redirects stop at the configured time.{% else %}This link does not expire automatically.{% endif %}</p>
+        </div>
+        <div class="stat-card">
+            <strong>{% if surl.is_available %}Active{% elif surl.is_expired %}Expired{% else %}Disabled{% endif %}</strong>
+            <span>Status</span>
+            <p>Current redirect availability for the short link.</p>
+        </div>
+    </section>
+
+    <section class="stats-layout">
+        <div class="card">
+            <div class="section-label">QR code</div>
+            <h2>Share-ready code</h2>
+            <p>Open or save the SVG QR code for print materials and quick sharing.</p>
+            <div class="qr-preview-shell">
+                <img src="{% url 'common:url_qr_code' pk=surl.id %}" alt="QR code for {{ surl.short_url }}" class="qr-preview">
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-label">Destination</div>
+            <h2>Link details</h2>
+            <p class="stats-detail-text"><strong>Short URL</strong> {{ surl.short_url }}</p>
+            <p class="stats-detail-text"><strong>Destination</strong> <a class="link-inline" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></p>
+            <p class="stats-detail-text"><strong>Note</strong> {{ surl.note|default:"-" }}</p>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-label">Last 14 days</div>
+        <h2>Daily clicks</h2>
+        <p>The chart below uses stored click events, so it reflects detailed tracking rather than only the running total.</p>
+        <div class="timeline-chart">
+            <div class="timeline-line-shell">
+                <svg class="timeline-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <line x1="0" y1="92" x2="100" y2="92" class="timeline-axis"></line>
+                    <polyline points="{{ timeline.points }}" class="timeline-polyline"></polyline>
+                </svg>
+                {% for item in timeline.items %}
+                <div class="timeline-point" style="left: {{ item.x }}%; top: {{ item.y }}%;">
+                    <div class="timeline-point-dot"></div>
+                    <div class="timeline-point-value">{{ item.total }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="timeline-labels">
+                {% for item in timeline.items %}
+                <div class="timeline-label">{{ item.label }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-layout">
+        <div class="card">
+            <div class="section-label">Referrers</div>
+            <h2>Top sources</h2>
+            <div class="mini-list">
+                {% for item in referrers %}
+                <div class="mini-list-item">
+                    <div class="mini-list-copy">
+                        <strong>{{ item.label }}</strong>
+                    </div>
+                    <div class="mini-list-metric">{{ item.total }} clicks</div>
+                </div>
+                {% empty %}
+                <div class="empty-card">No referrer data yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-label">Browsers</div>
+            <h2>Client mix</h2>
+            <div class="mini-list">
+                {% for item in browsers %}
+                <div class="mini-list-item">
+                    <div class="mini-list-copy">
+                        <strong>{{ item.label }}</strong>
+                    </div>
+                    <div class="mini-list-metric">{{ item.total }} clicks</div>
+                </div>
+                {% empty %}
+                <div class="empty-card">No browser data yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-label">Recent activity</div>
+        <h2>Latest clicks</h2>
+        <div class="table-scroll">
+            <table class="data-table stats-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Browser</th>
+                        <th>Referrer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in recent_events %}
+                    <tr>
+                        <td>{{ event.created_at|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ event.browser|default:"Unknown" }}</td>
+                        <td>{% if event.referrer %}<a class="link-muted" href="{{ event.referrer }}" target="_blank" rel="noopener noreferrer">{{ event.referrer }}</a>{% else %}-{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3"><div class="empty-card">No click events have been recorded yet.</div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

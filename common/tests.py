@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from django.core import mail
 from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from common.views import (
     EMAIL_CHANGE_CODE_PREFIX,
@@ -10,7 +13,7 @@ from common.views import (
     build_verification_cache_key,
     get_url_wc_data,
 )
-from shorty.models import Domain, Surl
+from shorty.models import ClickEvent, Domain, Surl
 
 
 class UrlPermissionTests(TestCase):
@@ -78,7 +81,54 @@ class WordCloudTests(TestCase):
 
         self.assertEqual(len(wc_data), 1)
         self.assertGreaterEqual(wc_data[0]['weight'], 1)
-        self.assertEqual(len(colors), 17)
+        self.assertEqual(len(colors), 0)
+
+
+class UrlInsightsViewsTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username='stats-owner', password='pw12345!')
+        self.other_user = User.objects.create_user(username='stats-other', password='pw12345!')
+        self.domain = Domain.objects.create(
+            name='stats.example.com',
+            owner=self.owner,
+            is_verified=True,
+        )
+        self.surl = Surl.objects.create(
+            alias='launch',
+            url='https://example.org/launch',
+            note='campaign launch',
+            domain=self.domain,
+            short_url='stats.example.com/launch',
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        ClickEvent.objects.create(surl=self.surl, referrer='news.example.com/story', browser='Chrome')
+        ClickEvent.objects.create(surl=self.surl, referrer='', browser='Safari')
+
+    def test_stats_view_requires_link_ownership(self):
+        self.client.force_login(self.other_user)
+
+        response = self.client.get(reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_stats_view_renders_click_breakdown(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'campaign launch')
+        self.assertContains(response, 'news.example.com')
+        self.assertContains(response, 'Chrome')
+
+    def test_qr_code_view_returns_svg(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url_qr_code', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'image/svg+xml')
+        self.assertContains(response, '<svg', status_code=200)
 
 
 class AuthRecaptchaTests(TestCase):
@@ -115,6 +165,14 @@ class AuthRecaptchaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(username='debug-user-no-consent').exists())
         self.assertContains(response, 'You must agree to the privacy notice')
+
+    @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')
+    def test_signup_page_shows_usage_log_notice(self):
+        response = self.client.get(reverse('common:signup'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'host name with page path')
+        self.assertContains(response, 'retained for 14 days')
 
     @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')
     def test_login_allows_debug_flow_without_recaptcha(self):

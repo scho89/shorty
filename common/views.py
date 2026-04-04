@@ -12,8 +12,9 @@ from django.core.mail import send_mail
 from django.db import connection
 from django.db.models import Count
 from django.db.models import Q
-from django.http import JsonResponse
-from django.shortcuts import render, redirect, HttpResponse, get_object_or_404
+from django.db.models.functions import TruncDate
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from common.forms import (
@@ -33,6 +34,8 @@ import secrets
 import sys
 import urllib.parse
 import urllib.request
+from collections import OrderedDict
+from datetime import date
 from urllib.error import URLError
 
 
@@ -559,6 +562,14 @@ def get_owned_objects(request):
     return domains, surls
 
 
+def get_owned_surl(request, pk):
+    return get_object_or_404(
+        Surl.objects.select_related('domain'),
+        pk=pk,
+        domain__owner=request.user,
+    )
+
+
 def build_url_context(domains, surls, form, selected_domain_id='', search_query='', **extra):
     domains = list(domains)
     surls = list(surls)
@@ -569,6 +580,7 @@ def build_url_context(domains, surls, form, selected_domain_id='', search_query=
             surl.domain.name,
             'background:#eff6ff;color:#1d4ed8;'
         )
+        surl.status_label, surl.status_tone = get_surl_status_display(surl)
 
     insights = get_url_insights(surls)
 
@@ -585,6 +597,14 @@ def build_url_context(domains, surls, form, selected_domain_id='', search_query=
     }
     context.update(extra)
     return context
+
+
+def get_surl_status_display(surl):
+    if surl.is_expired:
+        return 'Expired', 'warning'
+    if not surl.is_active:
+        return 'Disabled', 'warning'
+    return 'Active', 'success'
 
 
 def get_domain_badge_styles(domains):
@@ -727,11 +747,119 @@ def build_traffic_items(top_links, rising_links, domain_trends):
 
     return items[:12]
 
+
+def build_stats_timeline(surl, days=14):
+    today = timezone.localdate()
+    start_day = today - timedelta(days=days - 1)
+    counts = OrderedDict(
+        (start_day + timedelta(days=index), 0)
+        for index in range(days)
+    )
+    daily_counts = (
+        ClickEvent.objects.filter(surl=surl, created_at__date__gte=start_day)
+        .annotate(day=TruncDate('created_at'))
+        .values('day')
+        .annotate(total=Count('id'))
+        .order_by('day')
+    )
+    for item in daily_counts:
+        day = item['day']
+        if isinstance(day, date) and day in counts:
+            counts[day] = item['total']
+
+    peak = max(counts.values(), default=0)
+    timeline = []
+    total_days = max(len(counts), 1)
+    chart_height = 100
+    baseline = 92
+
+    for index, (day, total) in enumerate(counts.items()):
+        ratio = total / max(peak, 1)
+        y = baseline - round(ratio * 72)
+        timeline.append({
+            'label': day.strftime('%m-%d'),
+            'total': total,
+            'height': max(12, round(ratio * 100)),
+            'x': round(((index + 0.5) / total_days) * 100, 2),
+            'y': y,
+        })
+
+    timeline_points = ' '.join(f"{item['x']},{item['y']}" for item in timeline)
+    for item in timeline:
+        item['tooltip_y'] = max(item['y'] - 10, 8)
+
+    return {
+        'items': timeline,
+        'points': timeline_points,
+        'peak': peak,
+        'chart_height': chart_height,
+    }
+
+
+def build_top_breakdown(surl, field_name, empty_label):
+    rows = (
+        ClickEvent.objects.filter(surl=surl)
+        .values(field_name)
+        .annotate(total=Count('id'))
+        .order_by('-total', field_name)[:5]
+    )
+    items = []
+    for row in rows:
+        raw_value = (row.get(field_name) or '').strip()
+        items.append({
+            'label': raw_value or empty_label,
+            'total': row['total'],
+        })
+    return items
+
+
+@login_required(login_url='common:login')
+def url_stats(request, pk):
+    surl = get_owned_surl(request, pk)
+    timeline = build_stats_timeline(surl)
+    referrers = build_top_breakdown(surl, 'referrer', 'Direct / Unknown')
+    browsers = build_top_breakdown(surl, 'browser', 'Unknown')
+    recent_events = list(
+        surl.click_events.order_by('-created_at').values('created_at', 'referrer', 'browser')[:10]
+    )
+
+    context = {
+        'surl': surl,
+        'timeline': timeline,
+        'referrers': referrers,
+        'browsers': browsers,
+        'recent_events': recent_events,
+    }
+    return render(request, 'common/url_stats.html', context)
+
+
+@login_required(login_url='common:login')
+def url_qr_code(request, pk):
+    surl = get_owned_surl(request, pk)
+
+    try:
+        import qrcode
+        from qrcode.image.svg import SvgPathImage
+    except ImportError:
+        logger.exception('qrcode dependency is not installed')
+        return HttpResponse('QR code support is unavailable.', status=500)
+
+    qr = qrcode.make(
+        f'https://{surl.short_url}',
+        image_factory=SvgPathImage,
+        box_size=8,
+        border=2,
+    )
+    response = HttpResponse(content_type='image/svg+xml')
+    response['Content-Disposition'] = f'inline; filename="shorty-{surl.alias}-qr.svg"'
+    qr.save(response)
+    return response
+
 @login_required(login_url='common:login')
 @require_POST
 def url_delete(request,pk):
     if request.user.is_authenticated:
-        surl = get_object_or_404(Surl, pk=pk)
+        surl = get_owned_surl(request, pk)
         if surl.domain.owner.username == request.user.username:
             surl.delete()
             messages.success(request, f"URL {surl.short_url}이 삭제되었습니다.")
@@ -744,7 +872,7 @@ def url_delete(request,pk):
 @login_required(login_url='common:login')
 def url_edit(request,pk):
     if request.user.is_authenticated:
-        surl=Surl.objects.get(pk=pk)
+        surl = get_owned_surl(request, pk)
         if surl.domain.owner.username == request.user.username:
             if request.method == "POST":
                 form = SurlForm(request.POST, instance=surl, user=request.user)

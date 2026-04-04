@@ -52,6 +52,19 @@
             <label for="note">Note</label>
             <input class="input" type="text" name="note" id="note" value="{{ form.note.value|default_if_none:'' }}" placeholder="Internal note for the team">
         </div>
+        <div class="field-grid">
+            <div class="field-group">
+                <label for="expires_at">Expires at</label>
+                <input class="input" type="datetime-local" name="expires_at" id="expires_at" value="{{ form.expires_at.value|default_if_none:'' }}">
+            </div>
+            <label class="toggle-field" for="is_active">
+                <input type="checkbox" name="is_active" id="is_active" {% if form.is_active.value %}checked{% endif %}>
+                <span>
+                    <strong>Active link</strong>
+                    <small>Turn this off to disable redirects without deleting the alias.</small>
+                </span>
+            </label>
+        </div>
         <div class="button-row">
             <button class="button" type="submit">{% if "/_common_/url/edit/" in request.path %}Save changes{% else %}Create link{% endif %}</button>
         </div>

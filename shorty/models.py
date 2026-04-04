@@ -53,6 +53,8 @@ class Surl(models.Model):
     url = models.URLField(max_length=2048)
     note = models.CharField(max_length=2048,blank=True)
     domain = models.ForeignKey(Domain, on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
     short_url = models.URLField(
         max_length=128,
         unique=True,
@@ -80,6 +82,14 @@ class Surl(models.Model):
     def __str__(self):
         return str(self.domain)+"/"+(self.alias)
 
+    @property
+    def is_expired(self):
+        return bool(self.expires_at and self.expires_at <= timezone.now())
+
+    @property
+    def is_available(self):
+        return self.is_active and not self.is_expired
+
     def validation(self,short_url):
         try: 
             self.objects.get(short_url=short_url)
@@ -90,6 +100,8 @@ class Surl(models.Model):
 
 class ClickEvent(models.Model):
     surl = models.ForeignKey(Surl, on_delete=models.CASCADE, related_name='click_events')
+    referrer = models.URLField(max_length=2048, blank=True)
+    browser = models.CharField(max_length=120, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:

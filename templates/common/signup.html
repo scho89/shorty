@@ -34,6 +34,9 @@
                     <li><strong>Purpose:</strong> account creation, login, account security, and service-related notices.</li>
                     <li><strong>Retention period:</strong> kept while your account is active and deleted or anonymized within a reasonable period after account removal unless retention is required by law.</li>
                     <li><strong>Sharing:</strong> not provided to third parties except when required for legal compliance or essential service operation.</li>
+                    <li><strong>Service usage logs:</strong> when a short link is opened, the service stores the visit time, browser type, and referring site host name with page path. Query strings are not retained.</li>
+                    <li><strong>Usage purpose:</strong> link analytics, service performance review, and abuse or abnormal traffic detection.</li>
+                    <li><strong>Usage log retention:</strong> detailed click events are retained for 14 days and then automatically deleted.</li>
                 </ul>
                 <label class="checkbox-field" for="privacy_consent">
                     <input type="checkbox" name="privacy_consent" id="privacy_consent" {% if form.privacy_consent.value %}checked{% endif %}>

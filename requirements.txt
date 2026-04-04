@@ -5,6 +5,7 @@ dnspython==2.3.0
 mssql-django==1.5
 pymssql==2.3.2
 pyodbc==5.1.0
+qrcode==8.2
 sqlparse==0.5.4
 tzdata==2022.7
 waitress==3.0.1

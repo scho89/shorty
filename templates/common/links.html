@@ -38,7 +38,7 @@
                 <div class="table-header-copy">
                     <div class="section-label">Library</div>
                     <h2>All short links</h2>
-                    <p>Review aliases, destinations, notes, and visit counts without leaving the page.</p>
+                    <p>Review aliases, status, QR access, destinations, and visit counts without leaving the page.</p>
                 </div>
             </div>
             <div class="library-controls">
@@ -69,9 +69,11 @@
                     <thead>
                         <tr>
                             <th>Short URL</th>
+                            <th>Status</th>
                             <th>Visits</th>
                             <th>Destination</th>
                             <th>Note</th>
+                            <th>Expiry</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -79,11 +81,15 @@
                     {% for surl in surls %}
                         <tr>
                             <td><span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span></td>
+                            <td><span class="status-chip {{ surl.status_tone }}">{{ surl.status_label }}</span></td>
                             <td>{{ surl.visit_counts }}</td>
                             <td><a class="link-muted" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></td>
                             <td>{{ surl.note|default:"-" }}</td>
+                            <td>{% if surl.expires_at %}{{ surl.expires_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
                             <td class="action-cell">
                                 <div class="inline-actions">
+                                    <a class="button-secondary" href="{% url 'common:url_qr_code' pk=surl.id %}" target="_blank" rel="noopener noreferrer">QR</a>
+                                    <a class="button-secondary" href="{% url 'common:url_stats' pk=surl.id %}">Stats</a>
                                     <a class="button-secondary" href="{% url 'common:url_edit' pk=surl.id %}">Edit</a>
                                     <form class="inline-action-form" method="post" action="{% url 'common:url_delete' pk=surl.id %}">
                                         {% csrf_token %}
@@ -94,7 +100,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5">
+                            <td colspan="7">
                                 <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
                             </td>
                         </tr>
