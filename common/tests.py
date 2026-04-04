@@ -152,6 +152,15 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
         self.assertNotContains(response, f'href="{self.surl.url}"')
 
+    def test_links_page_routes_to_detail_view(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:links'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'data-href="{reverse("common:url_stats", kwargs={"pk": self.surl.pk})}"')
+        self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+
 
 class QuickCreateTests(TestCase):
     def setUp(self):
@@ -181,9 +190,30 @@ class QuickCreateTests(TestCase):
         created = Surl.objects.get(domain=self.domain)
         self.assertTrue(created.alias)
         self.assertTrue(created.is_active)
-        self.assertRedirects(response, reverse('common:url_stats', kwargs={'pk': created.pk}))
+        self.assertRedirects(response, f"{reverse('common:url')}?created={created.pk}")
         self.assertContains(response, created.short_url)
-        self.assertContains(response, '세부 설정은 상세 화면에서 이어서 관리할 수 있습니다.')
+        self.assertContains(response, 'Open details')
+
+    def test_links_create_generates_alias_when_blank(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:url_create'),
+            {
+                'next': reverse('common:links'),
+                'domain': self.domain.pk,
+                'url': 'https://example.org/library-create',
+                'alias': '',
+                'note': 'created from links',
+                'is_active': 'on',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        created = Surl.objects.get(url='https://example.org/library-create')
+        self.assertTrue(created.alias)
+        self.assertTrue(created.is_active)
 
 
 class AuthRecaptchaTests(TestCase):

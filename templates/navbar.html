@@ -6,6 +6,45 @@
             <span>Short links for teams</span>
         </span>
     </a>
+    <details class="nav-menu nav-menu-mobile">
+        <summary class="nav-menu-mobile-toggle" aria-label="Open menu">
+            <span class="nav-menu-mobile-icon" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+            <span class="nav-menu-mobile-text">Menu</span>
+        </summary>
+        <div class="nav-menu-panel nav-menu-mobile-panel">
+            {% if user.is_authenticated %}
+            <div class="nav-menu-panel-header">
+                <span class="nav-menu-avatar nav-menu-avatar-panel">{{ user.username|first|upper }}</span>
+                <span class="nav-menu-copy">
+                    <strong class="nav-menu-label">{{ user.username }}</strong>
+                    <span class="nav-menu-meta">
+                        {% if user.email %}
+                        {{ user.email }}
+                        {% else %}
+                        Signed in
+                        {% endif %}
+                    </span>
+                </span>
+            </div>
+            <a class="nav-menu-item" href="{% url 'common:url' %}">Dashboard</a>
+            <a class="nav-menu-item" href="{% url 'common:links' %}">Links</a>
+            <a class="nav-menu-item" href="{% url 'common:domain_list' %}">Domains</a>
+            <a class="nav-menu-item" href="{% url 'common:help' %}">Help</a>
+            <a class="nav-menu-item" href="{% url 'common:account_settings' %}">Account settings</a>
+            <form method="post" action="{% url 'common:logout' %}" class="nav-menu-form">
+                {% csrf_token %}
+                <button class="nav-menu-item nav-menu-button" type="submit">Log out</button>
+            </form>
+            {% else %}
+            <a class="nav-menu-item" href="{% url 'common:login' %}">Login</a>
+            <a class="nav-menu-item" href="{% url 'common:signup' %}">Create account</a>
+            {% endif %}
+        </div>
+    </details>
     <div class="site-nav-links">
         {% if user.is_authenticated %}
         <a class="site-nav-link" href="{% url 'common:url' %}">Dashboard</a>

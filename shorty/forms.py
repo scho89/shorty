@@ -13,7 +13,7 @@ class SurlForm(forms.ModelForm):
         self.fields['domain'].queryset = queryset.order_by('name')
         self.fields['domain'].empty_label = 'Select domain'
         self.fields['alias'].required = not allow_blank_alias
-        self.fields['expires_at'].input_formats = ['%Y-%m-%dT%H:%M']
+        self.fields['expires_at'].input_formats = ['%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M']
         if not self.is_bound and not getattr(self.instance, 'pk', None):
             self.initial.setdefault('is_active', True)
 
@@ -26,7 +26,7 @@ class SurlForm(forms.ModelForm):
         model = Surl
         fields = ['domain', 'alias','url','note', 'is_active', 'expires_at']
         widgets = {
-            'expires_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'expires_at': forms.TextInput(attrs={'placeholder': 'YYYY-MM-DD 00:00', 'autocomplete': 'off'}),
         }
 
         labels = {

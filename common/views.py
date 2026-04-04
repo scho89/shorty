@@ -14,6 +14,7 @@ from django.db.models import Count
 from django.db.models import Q
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse, JsonResponse
+from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -500,12 +501,22 @@ def url(request):
         if request.user.is_authenticated:
             domains, surls = get_owned_objects(request)
             dashboard_form = SurlForm(user=request.user, allow_blank_alias=True)
-            link_form = SurlForm(user=request.user)
+            link_form = SurlForm(user=request.user, allow_blank_alias=True)
+            quick_create_notice = None
+            created_pk = (request.GET.get('created') or '').strip()
+            if created_pk.isdigit():
+                created_surl = Surl.objects.filter(pk=int(created_pk), domain__owner=request.user).only('pk', 'short_url').first()
+                if created_surl:
+                    quick_create_notice = {
+                        'pk': created_surl.pk,
+                        'short_url': created_surl.short_url,
+                    }
             context = build_url_context(
                 domains=domains,
                 surls=surls,
                 dashboard_form=dashboard_form,
                 link_form=link_form,
+                quick_create_notice=quick_create_notice,
             )
             return render(request,'common/dashboard.html',context=context)    
 
@@ -531,7 +542,7 @@ def links(request):
             )
         surls = surls.order_by('-visit_counts')
         dashboard_form = SurlForm(user=request.user, allow_blank_alias=True)
-        link_form = SurlForm(user=request.user)
+        link_form = SurlForm(user=request.user, allow_blank_alias=True)
         context = build_url_context(
             domains=domains,
             surls=surls,
@@ -549,7 +560,7 @@ def links(request):
 def url_create(request):
     if request.user.is_authenticated:
         is_quick_create = request.POST.get('mode') == 'quick'
-        form = SurlForm(request.POST, user=request.user, allow_blank_alias=is_quick_create)
+        form = SurlForm(request.POST, user=request.user, allow_blank_alias=True)
         redirect_target = request.POST.get('next') or 'common:links'
         template_name = 'common/dashboard.html' if str(redirect_target).startswith('/_common_/url') else 'common/links.html'
         if form.is_valid():
@@ -566,15 +577,16 @@ def url_create(request):
                     domains=domains,
                     surls=surls,
                     dashboard_form=form if is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
-                    link_form=form if not is_quick_create else SurlForm(user=request.user),
+                    link_form=form if not is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
                 )
                 return render(request, template_name, context=context)
             try:
                 surl.validate_unique()
                 surl.save()
                 if is_quick_create:
-                    messages.success(request, f"URL {surl.short_url}이 등록되었습니다. 세부 설정은 상세 화면에서 이어서 관리할 수 있습니다.")
-                    return redirect('common:url_stats', pk=surl.pk)
+                    messages.success(request, f"URL {surl.short_url}이 등록되었습니다.")
+                    dashboard_url = reverse('common:url')
+                    return redirect(f'{dashboard_url}?created={surl.pk}')
                 messages.success(request, f"URL {surl.short_url}이 등록되었습니다.")
             except ValidationError as e:
                 domains, surls = get_owned_objects(request)
@@ -582,7 +594,7 @@ def url_create(request):
                     domains=domains,
                     surls=surls,
                     dashboard_form=form if is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
-                    link_form=form if not is_quick_create else SurlForm(user=request.user),
+                    link_form=form if not is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
                     e=e,
                 )
                 return render(request, template_name, context=context)
@@ -592,7 +604,7 @@ def url_create(request):
                 domains=domains,
                 surls=surls,
                 dashboard_form=form if is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
-                link_form=form if not is_quick_create else SurlForm(user=request.user),
+                link_form=form if not is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
             )
             return render(request, template_name, context=context)
 

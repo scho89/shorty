@@ -11,7 +11,11 @@
         <div class="button-row">
             <a class="button-secondary" href="{% url 'common:links' %}">Back to links</a>
             <a class="button-secondary" href="{% url 'common:url_edit' pk=surl.id %}">Edit link</a>
-            <a class="button" href="{% url 'common:url_qr_code' pk=surl.id %}" target="_blank" rel="noopener noreferrer">Open QR</a>
+            <a class="button-secondary" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">Open destination</a>
+            <form class="inline-action-form" method="post" action="{% url 'common:url_delete' pk=surl.id %}">
+                {% csrf_token %}
+                <button class="button-danger" type="submit" onclick="return confirm('Delete this short link?');">Delete link</button>
+            </form>
         </div>
     </section>
 
@@ -57,14 +61,14 @@
         <div class="card">
             <div class="section-label">QR code</div>
             <h2>Share-ready code</h2>
-            <p>Open or save the SVG QR code for print materials and quick sharing.</p>
-            <div class="qr-preview-shell">
-                <img src="{% url 'common:url_qr_code' pk=surl.id %}" alt="QR code for {{ surl.short_url }}" class="qr-preview">
+            <p>Generate the SVG only when you need it for print materials, posters, or quick sharing.</p>
+            <div class="button-row">
+                <a class="button" href="{% url 'common:url_qr_code' pk=surl.id %}" target="_blank" rel="noopener noreferrer">Open QR</a>
             </div>
         </div>
 
         <div class="card">
-            <div class="section-label">Destination</div>
+            <div class="section-label">Details</div>
             <h2>Link details</h2>
             <p class="stats-detail-text"><strong>Short URL</strong> {{ surl.short_url }}</p>
             <p class="stats-detail-text"><strong>Destination</strong> <a class="link-inline" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></p>
@@ -75,7 +79,7 @@
     <section class="card">
         <div class="section-label">Last 14 days</div>
         <h2>Daily clicks</h2>
-        <p>The chart below uses stored click events, so it reflects detailed tracking rather than only the running total.</p>
+        <p class="desktop-timeline-copy">The chart below uses stored click events, so it reflects detailed tracking rather than only the running total.</p>
         <div class="timeline-chart">
             <div class="timeline-line-shell">
                 <svg class="timeline-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -92,6 +96,17 @@
             <div class="timeline-labels">
                 {% for item in timeline.items %}
                 <div class="timeline-label">{{ item.label }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="timeline-mobile-summary">
+            <p>Mobile shows a simple 14-day summary instead of the chart.</p>
+            <div class="timeline-mobile-list">
+                {% for item in timeline.items %}
+                <div class="timeline-mobile-item">
+                    <strong>{{ item.label }}</strong>
+                    <span>{{ item.total }} clicks</span>
+                </div>
                 {% endfor %}
             </div>
         </div>
@@ -136,7 +151,7 @@
     <section class="card">
         <div class="section-label">Recent activity</div>
         <h2>Latest clicks</h2>
-        <div class="table-scroll">
+        <div class="table-scroll stats-table-shell">
             <table class="data-table stats-table">
                 <thead>
                     <tr>
@@ -159,6 +174,17 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        <div class="stats-mobile-events">
+            {% for event in recent_events %}
+            <div class="stats-mobile-event-card">
+                <strong>{{ event.created_at|date:"Y-m-d H:i:s" }}</strong>
+                <span>{{ event.browser|default:"Unknown" }}</span>
+                <span>{% if event.referrer %}{{ event.referrer }}{% else %}Direct / Unknown{% endif %}</span>
+            </div>
+            {% empty %}
+            <div class="empty-card">No click events have been recorded yet.</div>
+            {% endfor %}
         </div>
     </section>
 </div>
