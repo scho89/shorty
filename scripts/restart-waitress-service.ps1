@@ -1,6 +1,7 @@
 param(
     [string]$ServiceName = "ShortyWaitress",
     [switch]$SkipCheck,
+    [switch]$SkipMigrate,
     [switch]$SkipCollectstatic,
     [switch]$SkipRestart
 )
@@ -40,20 +41,26 @@ Write-Host "DJANGO_SETTINGS_PROFILE=prod"
 
 if (-not $SkipCheck) {
     Write-Host ""
-    Write-Host "[1/3] Running Django system checks..."
+    Write-Host "[1/4] Running Django system checks..."
     & $python manage.py check
+}
+
+if (-not $SkipMigrate) {
+    Write-Host ""
+    Write-Host "[2/4] Running migrations..."
+    & $python manage.py migrate
 }
 
 if (-not $SkipCollectstatic) {
     Write-Host ""
-    Write-Host "[2/3] Running collectstatic..."
+    Write-Host "[3/4] Running collectstatic..."
     Write-Host "This step is included because production serves files from staticfiles/, so CSS changes are not reflected until collectstatic runs."
     & $python manage.py collectstatic --noinput
 }
 
 if (-not $SkipRestart) {
     Write-Host ""
-    Write-Host "[3/3] Restarting Windows service..."
+    Write-Host "[4/4] Restarting Windows service..."
     $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
     if (-not $service) {
         throw "Service '$ServiceName' was not found."
@@ -68,7 +75,7 @@ if (-not $SkipRestart) {
     $service | Select-Object Status, Name, DisplayName | Format-Table -AutoSize
 } else {
     Write-Host ""
-    Write-Host "[3/3] Service restart skipped."
+    Write-Host "[4/4] Service restart skipped."
 }
 
 Write-Host ""
