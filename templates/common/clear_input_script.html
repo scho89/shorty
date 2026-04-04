@@ -1,0 +1,108 @@
+<script>
+    (function () {
+        var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-clear-input]'));
+        var fillButtons = Array.prototype.slice.call(document.querySelectorAll('[data-fill-datetime]'));
+
+        function buildSuggestedDate(daysToAdd) {
+            var value = new Date();
+            value.setHours(0, 0, 0, 0);
+            value.setDate(value.getDate() + daysToAdd);
+
+            var year = value.getFullYear();
+            var month = String(value.getMonth() + 1).padStart(2, '0');
+            var day = String(value.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day + ' 00:00';
+        }
+
+        function parseExistingDate(value) {
+            var match = /^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2})$/.exec((value || '').trim());
+            if (!match) {
+                return null;
+            }
+
+            var parsed = new Date(
+                Number(match[1]),
+                Number(match[2]) - 1,
+                Number(match[3]),
+                Number(match[4]),
+                Number(match[5]),
+                0,
+                0
+            );
+
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function formatDate(value) {
+            var year = value.getFullYear();
+            var month = String(value.getMonth() + 1).padStart(2, '0');
+            var day = String(value.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day + ' 00:00';
+        }
+
+        if (!buttons.length) {
+            buttons = [];
+        }
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var fieldId = button.getAttribute('data-clear-input');
+                var field = document.getElementById(fieldId);
+                if (!field) {
+                    return;
+                }
+
+                field.value = '';
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+
+        fillButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var fieldId = button.getAttribute('data-fill-datetime');
+                var field = document.getElementById(fieldId);
+                if (!field) {
+                    return;
+                }
+
+                var daysToAdd = parseInt(button.getAttribute('data-fill-days') || '7', 10);
+                var increment = Number.isNaN(daysToAdd) ? 1 : daysToAdd;
+                var existingValue = parseExistingDate(field.value);
+                if (existingValue) {
+                    existingValue.setDate(existingValue.getDate() + increment);
+                    existingValue.setHours(0, 0, 0, 0);
+                    field.value = formatDate(existingValue);
+                } else {
+                    field.value = buildSuggestedDate(increment);
+                }
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+
+        Array.prototype.slice.call(document.querySelectorAll('[data-fill-months]')).forEach(function (button) {
+            button.addEventListener('click', function () {
+                var fieldId = button.getAttribute('data-fill-datetime') || button.getAttribute('data-fill-months-target') || 'expires_at';
+                var field = document.getElementById(fieldId);
+                if (!field) {
+                    return;
+                }
+
+                var monthsToAdd = parseInt(button.getAttribute('data-fill-months') || '1', 10);
+                var increment = Number.isNaN(monthsToAdd) ? 1 : monthsToAdd;
+                var existingValue = parseExistingDate(field.value);
+                var value = existingValue || new Date();
+                value.setHours(0, 0, 0, 0);
+                if (!existingValue) {
+                    value.setDate(value.getDate() + 1);
+                }
+                value.setMonth(value.getMonth() + increment);
+                value.setHours(0, 0, 0, 0);
+                field.value = formatDate(value);
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+    }());
+</script>

@@ -1,0 +1,21 @@
+<script>
+    (function () {
+        var notice = document.querySelector('[data-quick-create-notice]');
+        if (!notice) {
+            return;
+        }
+
+        var dismissButton = notice.querySelector('[data-dismiss-quick-create]');
+        if (dismissButton) {
+            dismissButton.addEventListener('click', function () {
+                notice.remove();
+            });
+        }
+
+        window.setTimeout(function () {
+            if (document.body.contains(notice)) {
+                notice.remove();
+            }
+        }, 5000);
+    }());
+</script>

@@ -2,6 +2,22 @@
 
 {% block content %}
 <div class="page-grid">
+    {% if quick_create_notice %}
+    <section class="quick-create-notice" data-quick-create-notice>
+        <div class="card quick-create-notice-card">
+            <div>
+                <div class="section-label">Link created</div>
+                <h2>{{ quick_create_notice.short_url }}</h2>
+                <p>The new short link is ready. Open details now or keep adding more links.</p>
+            </div>
+            <div class="button-row">
+                <a class="button" href="{% url 'common:url_stats' pk=quick_create_notice.pk %}">Open details</a>
+                <button class="button-secondary" type="button" data-dismiss-quick-create>Keep adding</button>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
     <section class="app-header">
         <div>
             <div class="section-label">Dashboard</div>
@@ -38,7 +54,7 @@
     </section>
 
     <section>
-        {% include "common/url_form.html" %}
+        {% include "common/quick_url_form.html" %}
     </section>
 
     <section class="quick-actions-grid">
@@ -60,4 +76,11 @@
         </div>
     </section>
 </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    {% include 'common/short_url_preview_script.html' %}
+    {% include 'common/clear_input_script.html' %}
+    {% include 'common/quick_create_notice_script.html' %}
 {% endblock %}

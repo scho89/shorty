@@ -6,7 +6,7 @@
         {% if top_links %}
         <div class="leaderboard">
             {% for item in top_links %}
-            <a class="leaderboard-item" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">
+            <a class="leaderboard-item" href="{% url 'common:url_stats' pk=item.pk %}">
                 <span class="leaderboard-rank">#{{ item.rank }}</span>
                 <span class="leaderboard-main">
                     <strong>{{ item.alias }}</strong>
@@ -38,7 +38,7 @@
         {% if rising_links %}
         <div class="mini-list">
             {% for item in rising_links %}
-            <a class="mini-list-item" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">
+            <a class="mini-list-item" href="{% url 'common:url_stats' pk=item.pk %}">
                 <span class="mini-list-copy">
                     <strong>{{ item.alias }}</strong>
                     <span>{{ item.recent_total }} this week, {{ item.previous_total }} last week</span>

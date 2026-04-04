@@ -21,6 +21,7 @@ urlpatterns = [
     path('url/create/', views.url_create, name='url_create'),
     path('url/delete/<int:pk>', views.url_delete, name='url_delete'),
     path('url/edit/<int:pk>', views.url_edit, name='url_edit'),
+    path('url/toggle-active/<int:pk>', views.url_toggle_active, name='url_toggle_active'),
     path('url/<int:pk>/stats/', views.url_stats, name='url_stats'),
     path('url/<int:pk>/qr.svg', views.url_qr_code, name='url_qr_code'),
     path('domain/create', views.domain_create, name='domain_create'),
