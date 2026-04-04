@@ -38,7 +38,7 @@
     </section>
 
     <section>
-        {% include "common/url_form.html" %}
+        {% include "common/quick_url_form.html" %}
     </section>
 
     <section class="quick-actions-grid">
@@ -60,4 +60,9 @@
         </div>
     </section>
 </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    {% include 'common/short_url_preview_script.html' %}
 {% endblock %}

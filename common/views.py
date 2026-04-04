@@ -41,6 +41,7 @@ from urllib.error import URLError
 
 logger=logging.getLogger('shorty')
 SSL_LIST = getattr(settings, 'SSL_LIST', '')
+ALIAS_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
 DOMAIN_BADGE_PALETTE = [
     ('#eff6ff', '#1d4ed8'),
     ('#ecfdf3', '#138a52'),
@@ -304,6 +305,20 @@ def caddy_ask(request):
     return JsonResponse({'status': 'ok', 'domain': domain}, status=200)
 
 
+def generate_random_alias(length=7):
+    return ''.join(secrets.choice(ALIAS_ALPHABET) for _ in range(length))
+
+
+def assign_unique_alias(surl, max_attempts=10):
+    for _ in range(max_attempts):
+        candidate = generate_random_alias()
+        if not Surl.objects.filter(domain=surl.domain, alias=candidate).exists():
+            surl.alias = candidate
+            surl.short_url = f'{surl.domain.name}/{candidate}'
+            return True
+    return False
+
+
 def help_page(request):
     context = {
         'cname_target': '443.scho.kr',
@@ -484,11 +499,13 @@ def url(request):
     if request.method == "GET":
         if request.user.is_authenticated:
             domains, surls = get_owned_objects(request)
-            form = SurlForm(user=request.user)
+            dashboard_form = SurlForm(user=request.user, allow_blank_alias=True)
+            link_form = SurlForm(user=request.user)
             context = build_url_context(
                 domains=domains,
                 surls=surls,
-                form=form,
+                dashboard_form=dashboard_form,
+                link_form=link_form,
             )
             return render(request,'common/dashboard.html',context=context)    
 
@@ -513,11 +530,13 @@ def links(request):
                 | Q(domain__name__icontains=search_query)
             )
         surls = surls.order_by('-visit_counts')
-        form = SurlForm(user=request.user)
+        dashboard_form = SurlForm(user=request.user, allow_blank_alias=True)
+        link_form = SurlForm(user=request.user)
         context = build_url_context(
             domains=domains,
             surls=surls,
-            form=form,
+            dashboard_form=dashboard_form,
+            link_form=link_form,
             selected_domain_id=selected_domain_id,
             search_query=search_query,
         )
@@ -529,24 +548,52 @@ def links(request):
 @require_POST
 def url_create(request):
     if request.user.is_authenticated:
-        form = SurlForm(request.POST, user=request.user)
+        is_quick_create = request.POST.get('mode') == 'quick'
+        form = SurlForm(request.POST, user=request.user, allow_blank_alias=is_quick_create)
         redirect_target = request.POST.get('next') or 'common:links'
         template_name = 'common/dashboard.html' if str(redirect_target).startswith('/_common_/url') else 'common/links.html'
         if form.is_valid():
             surl = form.save(commit=False)
             surl.domain = form.cleaned_data['domain']
+            if is_quick_create:
+                surl.is_active = True
+            surl.alias = (surl.alias or '').strip()
             surl.short_url = str(surl.domain.name) + "/" + surl.alias
+            if not surl.alias and not assign_unique_alias(surl):
+                form.add_error('alias', 'Could not generate a unique alias. Please try again.')
+                domains, surls = get_owned_objects(request)
+                context = build_url_context(
+                    domains=domains,
+                    surls=surls,
+                    dashboard_form=form if is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
+                    link_form=form if not is_quick_create else SurlForm(user=request.user),
+                )
+                return render(request, template_name, context=context)
             try:
                 surl.validate_unique()
                 surl.save()
+                if is_quick_create:
+                    messages.success(request, f"URL {surl.short_url}이 등록되었습니다. 세부 설정은 상세 화면에서 이어서 관리할 수 있습니다.")
+                    return redirect('common:url_stats', pk=surl.pk)
                 messages.success(request, f"URL {surl.short_url}이 등록되었습니다.")
             except ValidationError as e:
                 domains, surls = get_owned_objects(request)
-                context = build_url_context(domains=domains, surls=surls, form=form, e=e)
+                context = build_url_context(
+                    domains=domains,
+                    surls=surls,
+                    dashboard_form=form if is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
+                    link_form=form if not is_quick_create else SurlForm(user=request.user),
+                    e=e,
+                )
                 return render(request, template_name, context=context)
         else:
             domains, surls = get_owned_objects(request)
-            context = build_url_context(domains=domains, surls=surls, form=form)
+            context = build_url_context(
+                domains=domains,
+                surls=surls,
+                dashboard_form=form if is_quick_create else SurlForm(user=request.user, allow_blank_alias=True),
+                link_form=form if not is_quick_create else SurlForm(user=request.user),
+            )
             return render(request, template_name, context=context)
 
         if redirect_target.startswith('/'):
@@ -570,7 +617,7 @@ def get_owned_surl(request, pk):
     )
 
 
-def build_url_context(domains, surls, form, selected_domain_id='', search_query='', **extra):
+def build_url_context(domains, surls, dashboard_form=None, link_form=None, selected_domain_id='', search_query='', **extra):
     domains = list(domains)
     surls = list(surls)
     domain_badge_styles = get_domain_badge_styles(domains)
@@ -587,7 +634,8 @@ def build_url_context(domains, surls, form, selected_domain_id='', search_query=
     context = {
         'surls': surls,
         'domains': domains,
-        'form': form,
+        'dashboard_form': dashboard_form,
+        'link_form': link_form,
         'wc_data': insights['traffic_items'],
         'top_links': insights['top_links'],
         'rising_links': insights['rising_links'],
@@ -634,6 +682,7 @@ def build_top_links(surls):
     ranked = sorted(surls, key=lambda surl: (-surl.visit_counts, surl.alias.lower()))
     return [
         {
+            'pk': surl.pk,
             'rank': index,
             'alias': surl.alias,
             'short_url': surl.short_url,
@@ -681,6 +730,7 @@ def build_rising_links(surls):
             continue
 
         rising.append({
+            'pk': surl.pk,
             'alias': surl.alias,
             'short_url': surl.short_url,
             'url': surl.url,
@@ -855,6 +905,22 @@ def url_qr_code(request, pk):
     qr.save(response)
     return response
 
+
+@login_required(login_url='common:login')
+@require_POST
+def url_toggle_active(request, pk):
+    surl = get_owned_surl(request, pk)
+    surl.is_active = not surl.is_active
+    surl.save(update_fields=['is_active'])
+
+    state_label = '활성화' if surl.is_active else '비활성화'
+    messages.success(request, f'URL {surl.short_url}이 {state_label}되었습니다.')
+
+    redirect_target = request.POST.get('next')
+    if redirect_target and redirect_target.startswith('/'):
+        return redirect(redirect_target)
+    return redirect('common:url_stats', pk=surl.pk)
+
 @login_required(login_url='common:login')
 @require_POST
 def url_delete(request,pk):
@@ -888,7 +954,14 @@ def url_edit(request,pk):
                                         
                     except ValidationError as e:
                         domains, surls = get_owned_objects(request)
-                        context = build_url_context(domains=domains, surls=surls, form=form, e=e, surl=surl)
+                        context = build_url_context(
+                            domains=domains,
+                            surls=surls,
+                            dashboard_form=SurlForm(user=request.user, allow_blank_alias=True),
+                            link_form=form,
+                            e=e,
+                            surl=surl,
+                        )
                         messages.error(request,"중복된 주소가 존재합니다.")
                         return render(request,'common/links.html',context=context)    
                     
@@ -896,7 +969,13 @@ def url_edit(request,pk):
                 form = SurlForm(instance=surl, user=request.user)
                 domains, surls = get_owned_objects(request)
                 
-                context = build_url_context(domains=domains, surls=surls, form=form, surl=surl)
+                context = build_url_context(
+                    domains=domains,
+                    surls=surls,
+                    dashboard_form=SurlForm(user=request.user, allow_blank_alias=True),
+                    link_form=form,
+                    surl=surl,
+                )
                 return render(request,'common/links.html',context=context)    
     
             return redirect('common:links')

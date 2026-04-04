@@ -112,3 +112,9 @@
     </section>
 </div>
 {% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    {% include 'common/short_url_preview_script.html' %}
+    {% include 'common/toggle_card_script.html' %}
+{% endblock %}

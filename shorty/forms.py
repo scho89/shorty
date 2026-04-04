@@ -3,7 +3,7 @@ from django.utils import timezone
 from shorty.models import Surl,Domain
 
 class SurlForm(forms.ModelForm):
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, allow_blank_alias=False, **kwargs):
         super().__init__(*args, **kwargs)
         queryset = Domain.objects.filter(is_verified=True)
         if user is not None and user.is_authenticated:
@@ -12,6 +12,7 @@ class SurlForm(forms.ModelForm):
             queryset = queryset.none()
         self.fields['domain'].queryset = queryset.order_by('name')
         self.fields['domain'].empty_label = 'Select domain'
+        self.fields['alias'].required = not allow_blank_alias
         self.fields['expires_at'].input_formats = ['%Y-%m-%dT%H:%M']
         if not self.is_bound and not getattr(self.instance, 'pk', None):
             self.initial.setdefault('is_active', True)

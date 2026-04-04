@@ -1,0 +1,33 @@
+<script>
+    (function () {
+        var toggles = Array.prototype.slice.call(document.querySelectorAll('.toggle-card .toggle-input'));
+        if (!toggles.length) {
+            return;
+        }
+
+        toggles.forEach(function (input) {
+            var card = input.closest('.toggle-card');
+            if (!card) {
+                return;
+            }
+
+            function syncState() {
+                card.classList.toggle('is-on', !!input.checked);
+                card.classList.toggle('is-off', !input.checked);
+            }
+
+            input.addEventListener('change', function () {
+                syncState();
+
+                if (input.classList.contains('auto-submit-toggle') && !input.disabled) {
+                    var form = input.form || input.closest('form');
+                    if (form) {
+                        form.requestSubmit();
+                    }
+                }
+            });
+
+            syncState();
+        });
+    }());
+</script>

@@ -130,6 +130,61 @@ class UrlInsightsViewsTests(TestCase):
         self.assertEqual(response['Content-Type'], 'image/svg+xml')
         self.assertContains(response, '<svg', status_code=200)
 
+    def test_stats_toggle_active_updates_link_state(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:url_toggle_active', kwargs={'pk': self.surl.pk}),
+            {'next': reverse('common:url_stats', kwargs={'pk': self.surl.pk})},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.surl.refresh_from_db()
+        self.assertFalse(self.surl.is_active)
+
+    def test_dashboard_cards_link_to_stats_page(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+        self.assertNotContains(response, f'href="{self.surl.url}"')
+
+
+class QuickCreateTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username='quick-owner', password='pw12345!')
+        self.domain = Domain.objects.create(
+            name='quick.example.com',
+            owner=self.owner,
+            is_verified=True,
+        )
+
+    def test_dashboard_quick_create_generates_alias_and_redirects_to_stats(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:url_create'),
+            {
+                'mode': 'quick',
+                'next': reverse('common:url'),
+                'domain': self.domain.pk,
+                'url': 'https://example.org/quick-start',
+                'alias': '',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        created = Surl.objects.get(domain=self.domain)
+        self.assertTrue(created.alias)
+        self.assertTrue(created.is_active)
+        self.assertRedirects(response, reverse('common:url_stats', kwargs={'pk': created.pk}))
+        self.assertContains(response, created.short_url)
+        self.assertContains(response, '세부 설정은 상세 화면에서 이어서 관리할 수 있습니다.')
+
 
 class AuthRecaptchaTests(TestCase):
     @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')

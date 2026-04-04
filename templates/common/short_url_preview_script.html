@@ -1,0 +1,48 @@
+<script>
+    (function () {
+        var cards = Array.prototype.slice.call(document.querySelectorAll('[data-short-url-preview-card]'));
+        if (!cards.length) {
+            return;
+        }
+
+        cards.forEach(function (card) {
+            var form = card.closest('form');
+            if (!form) {
+                return;
+            }
+
+            var domainField = form.querySelector('[data-short-url-domain]');
+            var aliasField = form.querySelector('[data-short-url-alias]');
+            var previewField = card.querySelector('[data-short-url-preview]');
+
+            if (!domainField || !aliasField || !previewField) {
+                return;
+            }
+
+            function updatePreview() {
+                var selectedOption = domainField.options[domainField.selectedIndex];
+                var domain = selectedOption ? selectedOption.text.trim() : '';
+                var alias = aliasField.value.trim().replace(/^\/+/, '');
+
+                if (!domain) {
+                    previewField.textContent = 'Choose a domain and alias to preview the full short URL.';
+                    card.classList.remove('is-ready');
+                    return;
+                }
+
+                if (!alias) {
+                    previewField.textContent = domain + '/...';
+                    card.classList.remove('is-ready');
+                    return;
+                }
+
+                previewField.textContent = domain + '/' + alias;
+                card.classList.add('is-ready');
+            }
+
+            domainField.addEventListener('change', updatePreview);
+            aliasField.addEventListener('input', updatePreview);
+            updatePreview();
+        });
+    }());
+</script>
