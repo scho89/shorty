@@ -130,6 +130,15 @@ class UrlInsightsViewsTests(TestCase):
         self.assertEqual(response['Content-Type'], 'image/svg+xml')
         self.assertContains(response, '<svg', status_code=200)
 
+    def test_stats_view_includes_qr_preview_image(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('common:url_qr_code', kwargs={'pk': self.surl.pk}))
+        self.assertContains(response, 'alt="QR code for')
+
     def test_stats_toggle_active_updates_link_state(self):
         self.client.force_login(self.owner)
 

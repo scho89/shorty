@@ -61,9 +61,14 @@
         <div class="card">
             <div class="section-label">QR code</div>
             <h2>Share-ready code</h2>
-            <p>Generate the SVG only when you need it for print materials, posters, or quick sharing.</p>
-            <div class="button-row">
-                <a class="button" href="{% url 'common:url_qr_code' pk=surl.id %}" target="_blank" rel="noopener noreferrer">Open QR</a>
+            <p>Preview the QR code here for quick sharing or scanning without an extra click.</p>
+            <div class="qr-preview-shell">
+                <img
+                    src="{% url 'common:url_qr_code' pk=surl.id %}"
+                    alt="QR code for {{ surl.short_url }}"
+                    class="qr-preview"
+                    loading="lazy"
+                >
             </div>
         </div>
 
