@@ -10,6 +10,11 @@ from django.utils import timezone
 from shorty.models import ClickEvent, Domain, Surl
 
 
+@override_settings(
+    ALLOWED_HOSTS=['*'],
+    STATIC_ALLOWED_HOSTS=['*'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class DomainVerificationTests(TestCase):
     def test_recent_verification_attempt_returns_retry_without_dns_lookup(self):
         owner = User.objects.create_user(username='verifier', password='pw12345!')
@@ -27,6 +32,11 @@ class DomainVerificationTests(TestCase):
         mock_resolve.assert_not_called()
 
 
+@override_settings(
+    ALLOWED_HOSTS=['*'],
+    STATIC_ALLOWED_HOSTS=['*'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class RedirectTests(TestCase):
     def setUp(self):
         cache.clear()
@@ -130,6 +140,11 @@ class RedirectTests(TestCase):
         self.assertFalse(ClickEvent.objects.filter(surl=surl).exists())
 
 
+@override_settings(
+    ALLOWED_HOSTS=['*'],
+    STATIC_ALLOWED_HOSTS=['*'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class CaddyAskTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username='caddy-owner', password='pw12345!')

@@ -16,6 +16,11 @@ from common.views import (
 from shorty.models import ClickEvent, Domain, Surl
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class UrlPermissionTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username='owner', password='pw12345!')
@@ -64,6 +69,11 @@ class UrlPermissionTests(TestCase):
         self.assertTrue(Surl.objects.filter(pk=surl.pk).exists())
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class WordCloudTests(TestCase):
     def test_word_cloud_handles_zero_visit_counts(self):
         owner = User.objects.create_user(username='wc-user', password='pw12345!')
@@ -84,6 +94,11 @@ class WordCloudTests(TestCase):
         self.assertEqual(len(colors), 0)
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class UrlInsightsViewsTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username='stats-owner', password='pw12345!')
@@ -130,6 +145,15 @@ class UrlInsightsViewsTests(TestCase):
         self.assertEqual(response['Content-Type'], 'image/svg+xml')
         self.assertContains(response, '<svg', status_code=200)
 
+    def test_stats_view_includes_qr_preview_image(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('common:url_qr_code', kwargs={'pk': self.surl.pk}))
+        self.assertContains(response, 'alt="QR code for')
+
     def test_stats_toggle_active_updates_link_state(self):
         self.client.force_login(self.owner)
 
@@ -162,6 +186,11 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class QuickCreateTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username='quick-owner', password='pw12345!')
@@ -216,6 +245,11 @@ class QuickCreateTests(TestCase):
         self.assertTrue(created.is_active)
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class AuthRecaptchaTests(TestCase):
     @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')
     def test_signup_allows_debug_flow_without_recaptcha(self):
@@ -276,6 +310,11 @@ class AuthRecaptchaTests(TestCase):
         self.assertTrue(response.context['user'].is_authenticated)
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class AccountSettingsTests(TestCase):
     def setUp(self):
         cache.clear()
@@ -336,6 +375,11 @@ class AccountSettingsTests(TestCase):
         self.assertTrue(self.user.check_password('EvenBetterPass456!'))
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class PasswordResetFlowTests(TestCase):
     def setUp(self):
         cache.clear()
@@ -375,6 +419,11 @@ class PasswordResetFlowTests(TestCase):
         self.assertTrue(self.user.check_password('NewComplexPass456!'))
 
 
+@override_settings(
+    ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    STATIC_ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
+    DYNAMIC_ALLOWED_HOSTS=False,
+)
 class UsernameReminderTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
