@@ -11,11 +11,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AddField(
-            model_name='domain',
-            name='host_allowed',
-            field=models.BooleanField(default=False),
-        ),
-        migrations.AddField(
             model_name='surl',
             name='visit_counts',
             field=models.IntegerField(default=0),
