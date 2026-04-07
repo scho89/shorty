@@ -1,0 +1,72 @@
+<script>
+    (function () {
+        var groups = Array.prototype.slice.call(document.querySelectorAll('[data-tab-group]'));
+        if (!groups.length) {
+            return;
+        }
+
+        groups.forEach(function (group) {
+            var buttons = Array.prototype.slice.call(group.querySelectorAll('[data-tab-button]'));
+            var panels = Array.prototype.slice.call(group.querySelectorAll('[data-tab-panel]'));
+            var forms = Array.prototype.slice.call(group.querySelectorAll('form'));
+            if (!buttons.length || !panels.length) {
+                return;
+            }
+
+            function syncForms(targetId) {
+                forms.forEach(function (form) {
+                    var input = form.querySelector('input[name="active_tab"]');
+                    if (!input) {
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'active_tab';
+                        form.appendChild(input);
+                    }
+                    input.value = targetId;
+                });
+            }
+
+            function activateTab(targetId) {
+                buttons.forEach(function (button) {
+                    var isActive = button.getAttribute('data-tab-target') === targetId;
+                    button.classList.toggle('is-active', isActive);
+                    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    button.setAttribute('tabindex', isActive ? '0' : '-1');
+                });
+
+                panels.forEach(function (panel) {
+                    var isActive = panel.id === targetId;
+                    panel.hidden = !isActive;
+                    panel.classList.toggle('is-active', isActive);
+                });
+
+                syncForms(targetId);
+            }
+
+            buttons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    activateTab(button.getAttribute('data-tab-target'));
+                });
+            });
+
+            var firstErroredPanel = panels.find(function (panel) {
+                return panel.classList.contains('has-errors');
+            });
+            var queryTarget = new URLSearchParams(window.location.search).get('tab');
+            var explicitButton = buttons.find(function (button) {
+                return button.classList.contains('is-active');
+            });
+            var initialTarget = buttons.some(function (button) {
+                return button.getAttribute('data-tab-target') === queryTarget;
+            })
+                ? queryTarget
+                : (firstErroredPanel
+                ? firstErroredPanel.id
+                : (explicitButton
+                ? explicitButton.getAttribute('data-tab-target')
+                : buttons[0].getAttribute('data-tab-target')));
+
+            activateTab(initialTarget);
+        });
+    }());
+</script>

@@ -5,7 +5,7 @@
     <form method="post" action="{% url 'common:domain_create'%}" class="form-stack">
         {% csrf_token %}
         {% if form.errors %}
-        <div class="alert-box">
+        <div class="alert-box" id="domain-form-errors" data-form-errors>
             {% for field in form %}
                 {% if field.errors %}
                 <div><strong>{{ field.label }}</strong> {{ field.errors }}</div>
@@ -14,14 +14,14 @@
         </div>
         {% endif %}
         {% if e %}
-        <div class="alert-box"><strong>{{ e.messages.0 }}</strong></div>
+        <div class="alert-box" id="domain-form-errors-generic" data-form-errors><strong>{{ e.messages.0 }}</strong></div>
         {% endif %}
         {% if err %}
-        <div class="alert-box"><strong>{{ err }}</strong></div>
+        <div class="alert-box" id="domain-form-errors-verify" data-form-errors><strong>{{ err }}</strong></div>
         {% endif %}
         <div class="field-group">
             <label for="name">Domain name</label>
-            <input class="input" type="text" name="name" id="name" value="{{ form.domain.value|default_if_none:'' }}" placeholder="brand.example.com">
+            <input class="input" type="text" name="name" id="name" value="{{ form.name.value|default_if_none:'' }}" placeholder="brand.example.com">
         </div>
         <div class="button-row">
             <button class="button" type="submit">Register domain</button>

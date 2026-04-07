@@ -8,9 +8,6 @@
             <h1>Link management</h1>
             <p>Create, filter, and manage short links from one clean workspace.</p>
         </div>
-        <div class="button-row">
-            <a class="button-secondary" href="#links-library">Jump to all short links</a>
-        </div>
     </section>
 
     <section class="metrics-row">
@@ -31,101 +28,110 @@
         </div>
     </section>
 
-    <section>
-        {% include "common/url_form.html" %}
-    </section>
+    <section class="tabs-layout" data-tab-group>
+        <aside class="tabs-nav" role="tablist" aria-label="Links sections">
+            <button class="tabs-nav-button is-active" type="button" data-tab-button data-tab-target="links-library" role="tab" aria-controls="links-library" aria-selected="true">All links</button>
+            <button class="tabs-nav-button" type="button" data-tab-button data-tab-target="links-create" role="tab" aria-controls="links-create" aria-selected="false">Create link</button>
+        </aside>
 
-    <section id="links-library">
-        <div class="table-card">
-            <div class="table-header">
-                <div class="table-header-copy">
-                    <div class="section-label">Library</div>
-                    <h2>All short links</h2>
-                    <p>Review the essentials at a glance, then click any row or card to open the detail view.</p>
+        <div class="tabs-content">
+            <section class="tab-panel" id="links-library" data-tab-panel role="tabpanel">
+                <div class="table-card">
+                    <div class="table-header">
+                        <div class="table-header-copy">
+                            <div class="section-label">Library</div>
+                            <h2>All short links</h2>
+                            <p>Review the essentials at a glance, then click any row or card to open the detail view.</p>
+                        </div>
+                    </div>
+                    <div class="library-controls">
+                        <form method="get" action="{% url 'common:links' %}" class="library-filter">
+                            <div class="library-filter-grid">
+                                <div class="library-field">
+                                    <label class="library-filter-label" for="library-search">Search</label>
+                                    <input class="input library-search-input" type="search" name="q" id="library-search" value="{{ search_query }}" placeholder="Alias, URL, note, domain">
+                                </div>
+                                <div class="library-field">
+                                    <label class="library-filter-label" for="library-domain">Domain</label>
+                                    <select class="select library-filter-select" name="domain" id="library-domain">
+                                        <option value="">All domains</option>
+                                        {% for domain in domains %}
+                                        <option value="{{ domain.id }}"{% if selected_domain_id == domain.id|stringformat:'s' %} selected{% endif %}>{{ domain.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="library-toolbar">
+                                <div class="table-meta">{{ surls|length }} total</div>
+                                <button class="button-secondary library-filter-button" type="submit">Apply filters</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="table-scroll links-table-shell">
+                        <table class="data-table links-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Short URL</th>
+                                    <th>Destination</th>
+                                    <th>Status</th>
+                                    <th>Visits</th>
+                                    <th>Expiry</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for surl in surls %}
+                                <tr class="clickable-row" data-href="{% url 'common:url_stats' pk=surl.id %}" tabindex="0">
+                                    <td>
+                                        <div class="library-primary-cell">
+                                            <span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="library-destination-cell">
+                                            <strong>{{ surl.url }}</strong>
+                                            <span>{{ surl.note|default:"No note" }}</span>
+                                        </div>
+                                    </td>
+                                    <td><span class="status-chip {{ surl.status_tone }}">{{ surl.status_label }}</span></td>
+                                    <td>{{ surl.visit_counts }}</td>
+                                    <td>{% if surl.expires_at %}{{ surl.expires_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="link-card-list">
+                        {% for surl in surls %}
+                        <a class="link-library-card" href="{% url 'common:url_stats' pk=surl.id %}">
+                            <div class="link-library-card-top">
+                                <span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span>
+                                <span class="status-chip {{ surl.status_tone }}">{{ surl.status_label }}</span>
+                            </div>
+                            <div class="link-library-card-body">
+                                <strong>{{ surl.url }}</strong>
+                                <span>{{ surl.note|default:"No note" }}</span>
+                            </div>
+                            <div class="link-library-card-meta">
+                                <span>{{ surl.visit_counts }} visits</span>
+                                <span>{% if surl.expires_at %}Expires {{ surl.expires_at|date:"Y-m-d" }}{% else %}No expiry{% endif %}</span>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
-            <div class="library-controls">
-                <form method="get" action="{% url 'common:links' %}" class="library-filter">
-                    <div class="library-filter-grid">
-                        <div class="library-field">
-                            <label class="library-filter-label" for="library-search">Search</label>
-                            <input class="input library-search-input" type="search" name="q" id="library-search" value="{{ search_query }}" placeholder="Alias, URL, note, domain">
-                        </div>
-                        <div class="library-field">
-                            <label class="library-filter-label" for="library-domain">Domain</label>
-                            <select class="select library-filter-select" name="domain" id="library-domain">
-                                <option value="">All domains</option>
-                                {% for domain in domains %}
-                                <option value="{{ domain.id }}"{% if selected_domain_id == domain.id|stringformat:'s' %} selected{% endif %}>{{ domain.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="library-toolbar">
-                        <div class="table-meta">{{ surls|length }} total</div>
-                        <button class="button-secondary library-filter-button" type="submit">Apply filters</button>
-                    </div>
-                </form>
-            </div>
-            <div class="table-scroll links-table-shell">
-                <table class="data-table links-data-table">
-                    <thead>
-                        <tr>
-                            <th>Short URL</th>
-                            <th>Destination</th>
-                            <th>Status</th>
-                            <th>Visits</th>
-                            <th>Expiry</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for surl in surls %}
-                        <tr class="clickable-row" data-href="{% url 'common:url_stats' pk=surl.id %}" tabindex="0">
-                            <td>
-                                <div class="library-primary-cell">
-                                    <span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="library-destination-cell">
-                                    <strong>{{ surl.url }}</strong>
-                                    <span>{{ surl.note|default:"No note" }}</span>
-                                </div>
-                            </td>
-                            <td><span class="status-chip {{ surl.status_tone }}">{{ surl.status_label }}</span></td>
-                            <td>{{ surl.visit_counts }}</td>
-                            <td>{% if surl.expires_at %}{{ surl.expires_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5">
-                                <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="link-card-list">
-                {% for surl in surls %}
-                <a class="link-library-card" href="{% url 'common:url_stats' pk=surl.id %}">
-                    <div class="link-library-card-top">
-                        <span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span>
-                        <span class="status-chip {{ surl.status_tone }}">{{ surl.status_label }}</span>
-                    </div>
-                    <div class="link-library-card-body">
-                        <strong>{{ surl.url }}</strong>
-                        <span>{{ surl.note|default:"No note" }}</span>
-                    </div>
-                    <div class="link-library-card-meta">
-                        <span>{{ surl.visit_counts }} visits</span>
-                        <span>{% if surl.expires_at %}Expires {{ surl.expires_at|date:"Y-m-d" }}{% else %}No expiry{% endif %}</span>
-                    </div>
-                </a>
-                {% empty %}
-                <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
-                {% endfor %}
-            </div>
+            </section>
+
+            <section class="tab-panel {% if link_form.errors or e %}has-errors{% endif %}" id="links-create" data-tab-panel role="tabpanel" hidden>
+                {% include "common/url_form.html" %}
+            </section>
         </div>
     </section>
 </div>
@@ -133,6 +139,8 @@
 
 {% block script %}
     {{ block.super }}
+    {% include 'common/tabs_script.html' %}
+    {% include 'common/form_error_focus_script.html' %}
     {% include 'common/short_url_preview_script.html' %}
     {% include 'common/clear_input_script.html' %}
     {% include 'common/toggle_card_script.html' %}

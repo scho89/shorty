@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-grid">
+    <section class="app-header">
+        <div>
+            <div class="section-label">Domain settings</div>
+            <h1>{{ domain.name }}</h1>
+            <p>Choose what this domain should do at the root and which fallback URL to use for missing aliases, expired links, and inactive links.</p>
+        </div>
+        <div class="button-row">
+            <a class="button-secondary" href="{% url 'common:domain_list' %}">Back to domains</a>
+            <a class="button-secondary" href="{% url 'common:settings' %}">Manage fallback URLs</a>
+        </div>
+    </section>
+
+    <section class="tabs-layout" data-tab-group>
+        <aside class="tabs-nav" role="tablist" aria-label="Domain settings sections">
+            <button class="tabs-nav-button is-active" type="button" data-tab-button data-tab-target="domain-overview" role="tab" aria-controls="domain-overview" aria-selected="true">Overview</button>
+            <button class="tabs-nav-button" type="button" data-tab-button data-tab-target="domain-routing" role="tab" aria-controls="domain-routing" aria-selected="false">Routing</button>
+        </aside>
+
+        <div class="tabs-content">
+            <section class="tab-panel is-active" id="domain-overview" data-tab-panel role="tabpanel">
+                <div class="tab-panel-stack">
+                    <div class="card">
+                        <div class="section-label">Overview</div>
+                        <h2>Domain snapshot</h2>
+                        <p>Use the tabs to configure each routing state separately. This keeps the page lighter while preserving the same override behavior.</p>
+                        <div class="metrics-row compact-metrics-row">
+                            <div class="stat-card">
+                                <strong>{{ link_count }}</strong>
+                                <span>Registered short links</span>
+                                <p>Links currently published on this domain.</p>
+                            </div>
+                            <div class="stat-card">
+                                <strong>{{ fallback_options|length }}</strong>
+                                <span>Fallback URL choices</span>
+                                <p>Active registry items available for selection.</p>
+                            </div>
+                            <div class="stat-card">
+                                <strong>{% if domain.is_verified %}Ready{% else %}Pending{% endif %}</strong>
+                                <span>Verification status</span>
+                                <p>{% if domain.is_verified %}This domain can already serve traffic.{% else %}Verify the domain before using it publicly.{% endif %}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions-grid">
+                        <div class="card">
+                            <div class="section-label">Verification</div>
+                            <h2>{% if domain.is_verified %}Domain verified{% else %}Domain pending verification{% endif %}</h2>
+                            {% if domain.is_verified %}
+                            <p>This domain is already verified and ready to use in published short links.</p>
+                            {% else %}
+                            <p>Add the DNS token below, then verify ownership from here instead of the domain list.</p>
+                            <div class="code-block">
+                                <strong>DNS TXT token</strong>
+                                <div class="status-token">{{ domain.dns_txt }}</div>
+                            </div>
+                            <form method="post" action="{% url 'common:domain_verify' pk=domain.pk %}" class="button-row">
+                                {% csrf_token %}
+                                <button class="button-warning" type="submit">Verify domain</button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        <div class="card">
+                            <div class="section-label">Danger zone</div>
+                            <h2>Delete domain</h2>
+                            <p>Deleting this domain also removes all linked short URLs. Use this only when the host is no longer needed.</p>
+                            <form method="post" action="{% url 'common:domain_delete' pk=domain.pk %}" class="button-row">
+                                {% csrf_token %}
+                                <button class="button-danger" type="submit" onclick="return confirm('Deleting this domain also removes all linked short URLs. Continue?');">Delete domain</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <form method="post" action="{% url 'common:domain_settings_update' pk=domain.pk %}" class="form-stack">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="alert-box">
+                    {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <section class="tab-panel{% for section in policy_sections %}{% if section.action_field.errors or section.fallback_field.errors or section.message_field.errors %} has-errors{% endif %}{% endfor %}" id="domain-routing" data-tab-panel role="tabpanel" hidden>
+                    <div class="card settings-card">
+                        <div>
+                            <div class="section-label">Routing policy</div>
+                            <h2>Routing overrides</h2>
+                            <p>Choose whether each state should inherit the global default, use a fallback URL, or show a message only for {{ domain.name }}.</p>
+                        </div>
+                        {% include 'common/policy_sections.html' with policy_sections=policy_sections %}
+                        <div class="button-row">
+                            <button class="button" type="submit">Save domain settings</button>
+                        </div>
+                    </div>
+                </section>
+            </form>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    {% include 'common/tabs_script.html' %}
+    {% include 'common/policy_sections_script.html' %}
+{% endblock %}

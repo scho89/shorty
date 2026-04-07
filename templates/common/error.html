@@ -6,7 +6,7 @@
         <h1 class="auth-title">{{ err.code }}</h1>
         <p>{{ err.message }}</p>
         <div class="button-row">
-            <a class="button-secondary" href="/">Go home</a>
+            <a class="button-secondary" href="{{ err.button_href|default:'/' }}">{{ err.button_label|default:'Go home' }}</a>
         </div>
     </div>
 </section>

@@ -7,7 +7,7 @@
         <input type="hidden" name="mode" value="quick">
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
         {% if dashboard_form.errors %}
-        <div class="alert-box">
+        <div class="alert-box" id="quick-create-errors" data-form-errors>
             {% for field in dashboard_form %}
                 {% if field.errors %}
                 <div><strong>{{ field.label }}</strong> {{ field.errors }}</div>
@@ -16,7 +16,7 @@
         </div>
         {% endif %}
         {% if e and request.path == '/_common_/url/' %}
-        <div class="alert-box"><strong>{{ e.messages.0 }}</strong></div>
+        <div class="alert-box" id="quick-create-errors-generic" data-form-errors><strong>{{ e.messages.0 }}</strong></div>
         {% endif %}
         <div class="field-group">
             <label for="quick-domain">Domain</label>

@@ -1,3 +1,21 @@
+{% if created_link_notice %}
+<div class="flash-stack">
+    <div class="card quick-create-notice-card alert-auto-dismissible" data-created-link-notice>
+        <div>
+            <div class="section-label">Link created</div>
+            <h2>{{ created_link_notice.short_url }}</h2>
+            <p>The new short link is ready. Open details now or keep working from the current page.</p>
+        </div>
+        <div class="button-row">
+            <a class="button" href="{% url 'common:url_stats' pk=created_link_notice.pk %}">Open details</a>
+            {% if created_link_keep_adding_href %}
+            <a class="button-secondary" href="{{ created_link_keep_adding_href }}">Keep adding</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if messages %}
 <div class="flash-stack">
     {% for message in messages %}
@@ -6,11 +24,14 @@
     </div>
     {% endfor %}
 </div>
+{% endif %}
+
+{% if created_link_notice or messages %}
 <script>
     window.setTimeout(function () {
         document.querySelectorAll(".alert-auto-dismissible").forEach(function (el) {
             el.remove();
         });
-    }, 4000);
+    }, 5000);
 </script>
 {% endif %}

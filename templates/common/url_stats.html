@@ -107,7 +107,7 @@
         <div class="timeline-mobile-summary">
             <p>Mobile shows a simple 14-day summary instead of the chart.</p>
             <div class="timeline-mobile-list">
-                {% for item in timeline.items %}
+                {% for item in timeline.items reversed %}
                 <div class="timeline-mobile-item">
                     <strong>{{ item.label }}</strong>
                     <span>{{ item.total }} clicks</span>

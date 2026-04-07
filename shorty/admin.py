@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ClickEvent, Surl, Domain
+from .models import ClickEvent, Domain, FallbackDestination, GlobalRoutingSettings, Surl
 
 # Register your models here.
 
@@ -14,6 +14,22 @@ class DomainAdmin(admin.ModelAdmin):
     list_display = ['name','owner']
     
 admin.site.register(Domain, DomainAdmin)
+
+
+class FallbackDestinationAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'url', 'note', 'owner__username']
+    list_display = ('name', 'owner', 'url')
+
+
+admin.site.register(FallbackDestination, FallbackDestinationAdmin)
+
+
+class GlobalRoutingSettingsAdmin(admin.ModelAdmin):
+    search_fields = ['owner__username']
+    list_display = ('owner', 'root_action', 'missing_alias_action', 'inactive_action', 'expired_action')
+
+
+admin.site.register(GlobalRoutingSettings, GlobalRoutingSettingsAdmin)
 
 
 class ClickEventAdmin(admin.ModelAdmin):

@@ -17,6 +17,7 @@ from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from django.views.decorators.http import require_POST
 from common.forms import (
     EmailChangeRequestForm,
@@ -26,8 +27,8 @@ from common.forms import (
     UsernameReminderRequestForm,
     UserForm,
 )
-from shorty.forms import SurlForm,DomainForm
-from shorty.models import ClickEvent, Domain, Surl
+from shorty.forms import DomainForm, DomainRoutingSettingsForm, FallbackDestinationForm, GlobalRoutingSettingsForm, SurlForm
+from shorty.models import ClickEvent, Domain, FallbackDestination, GlobalRoutingSettings, Surl
 
 import json
 import logging
@@ -488,12 +489,193 @@ def domain_list(request):
     
     # if request.method == "GET":
     if request.user.is_authenticated:
-        domains = Domain.objects.filter(owner__username=request.user.username)
-        context = {'domains':domains}
+        domains = (
+            Domain.objects.filter(owner__username=request.user.username)
+            .annotate(link_count=Count('surl'))
+            .order_by('name')
+        )
+        context = {'domains':domains, 'form': DomainForm()}
         return render(request,'common/domain.html',context=context)    
 
     else:
         return render(request,'shorty/index.html')    
+
+def get_owned_domain(request, pk):
+    return get_object_or_404(
+        Domain.objects.select_related('owner'),
+        pk=pk,
+        owner=request.user,
+    )
+
+
+def get_global_routing_settings(owner):
+    settings_obj, _created = GlobalRoutingSettings.objects.get_or_create(owner=owner)
+    return settings_obj
+
+
+def build_policy_sections(form, scope_label, include_inherit):
+    sections = []
+    labels = {
+        'root': 'Root',
+        'missing_alias': 'Missing alias',
+        'inactive': 'Inactive',
+        'expired': 'Expired',
+    }
+    descriptions = {
+        'root': f'Choose what happens when someone opens the {scope_label} root URL.',
+        'missing_alias': f'Choose what happens when an alias does not exist on the {scope_label}.',
+        'inactive': f'Choose what happens when a matching alias exists but is inactive on the {scope_label}.',
+        'expired': f'Choose what happens when a matching alias exists but is expired on the {scope_label}.',
+    }
+    for key in ['root', 'missing_alias', 'inactive', 'expired']:
+        sections.append({
+            'key': key,
+            'title': labels[key],
+            'description': descriptions[key],
+            'action_field': form[f'{key}_action'],
+            'fallback_field': form[f'{key}_fallback'],
+            'message_field': form[f'{key}_message'],
+            'include_inherit': include_inherit,
+        })
+    return sections
+
+
+def build_settings_context(request, fallback_form=None, global_form=None):
+    fallback_destinations = list(
+        FallbackDestination.objects.filter(owner=request.user).order_by('name', 'pk')
+    )
+    fallback_in_use = (
+        Domain.objects.filter(owner=request.user)
+        .exclude(root_fallback=None, missing_alias_fallback=None, inactive_fallback=None, expired_fallback=None)
+        .count()
+    )
+    global_settings = get_global_routing_settings(request.user)
+    global_form = global_form or GlobalRoutingSettingsForm(instance=global_settings, owner=request.user)
+    return {
+        'fallback_destinations': fallback_destinations,
+        'fallback_form': fallback_form or FallbackDestinationForm(owner=request.user),
+        'global_settings_form': global_form,
+        'global_policy_sections': build_policy_sections(global_form, 'workspace', include_inherit=False),
+        'fallback_count': len(fallback_destinations),
+        'fallback_in_use': fallback_in_use,
+    }
+
+
+def redirect_with_tab(route_name, *, tab=None, kwargs=None):
+    url = reverse(route_name, kwargs=kwargs)
+    if tab:
+        return redirect(f'{url}?{urlencode({"tab": tab})}')
+    return redirect(url)
+
+
+def append_tab_to_path(path, tab):
+    if not path or not tab or not str(path).startswith('/'):
+        return path
+
+    parts = urlsplit(path)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query['tab'] = tab
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
+def append_query_params_to_path(path, **params):
+    if not path or not str(path).startswith('/'):
+        return path
+
+    clean_params = {key: value for key, value in params.items() if value not in (None, '')}
+    if not clean_params:
+        return path
+
+    parts = urlsplit(path)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query.update(clean_params)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
+@login_required(login_url='common:login')
+def settings_page(request):
+    context = build_settings_context(request)
+    return render(request, 'common/settings.html', context)
+
+
+@login_required(login_url='common:login')
+@require_POST
+def fallback_destination_create(request):
+    form = FallbackDestinationForm(request.POST, owner=request.user)
+    active_tab = (request.POST.get('active_tab') or '').strip()
+    if form.is_valid():
+        destination = form.save(commit=False)
+        destination.owner = request.user
+        destination.save()
+        messages.success(request, f'Fallback URL {destination.name} was added.')
+        return redirect_with_tab('common:settings', tab=active_tab)
+
+    context = build_settings_context(request, fallback_form=form)
+    return render(request, 'common/settings.html', context)
+
+
+@login_required(login_url='common:login')
+@require_POST
+def global_routing_settings_update(request):
+    settings_obj = get_global_routing_settings(request.user)
+    form = GlobalRoutingSettingsForm(request.POST, instance=settings_obj, owner=request.user)
+    active_tab = (request.POST.get('active_tab') or '').strip()
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Global routing defaults were updated.')
+        return redirect_with_tab('common:settings', tab=active_tab)
+
+    context = build_settings_context(request, global_form=form)
+    return render(request, 'common/settings.html', context)
+
+
+@login_required(login_url='common:login')
+@require_POST
+def fallback_destination_delete(request, pk):
+    destination = get_object_or_404(FallbackDestination, pk=pk, owner=request.user)
+    active_tab = (request.POST.get('active_tab') or '').strip()
+    destination_name = destination.name
+    destination.delete()
+    messages.success(request, f'Fallback URL {destination_name} was deleted.')
+    return redirect_with_tab('common:settings', tab=active_tab)
+
+
+@login_required(login_url='common:login')
+def domain_settings(request, pk):
+    domain = get_owned_domain(request, pk)
+    form = DomainRoutingSettingsForm(instance=domain, owner=request.user)
+    fallback_options = FallbackDestination.objects.filter(owner=request.user).order_by('name', 'pk')
+    context = {
+        'domain': domain,
+        'form': form,
+        'fallback_options': fallback_options,
+        'link_count': Surl.objects.filter(domain=domain).count(),
+        'policy_sections': build_policy_sections(form, domain.name, include_inherit=True),
+    }
+    return render(request, 'common/domain_settings.html', context)
+
+
+@login_required(login_url='common:login')
+@require_POST
+def domain_settings_update(request, pk):
+    domain = get_owned_domain(request, pk)
+    form = DomainRoutingSettingsForm(request.POST, instance=domain, owner=request.user)
+    fallback_options = FallbackDestination.objects.filter(owner=request.user).order_by('name', 'pk')
+    active_tab = (request.POST.get('active_tab') or '').strip()
+    if form.is_valid():
+        form.save()
+        messages.success(request, f'Domain settings for {domain.name} were updated.')
+        return redirect_with_tab('common:domain_settings', kwargs={'pk': domain.pk}, tab=active_tab)
+
+    context = {
+        'domain': domain,
+        'form': form,
+        'fallback_options': fallback_options,
+        'link_count': Surl.objects.filter(domain=domain).count(),
+        'policy_sections': build_policy_sections(form, domain.name, include_inherit=True),
+    }
+    return render(request, 'common/domain_settings.html', context)
+
 
 @login_required(login_url='common:login')    
 def url(request):
@@ -502,12 +684,12 @@ def url(request):
             domains, surls = get_owned_objects(request)
             dashboard_form = SurlForm(user=request.user, allow_blank_alias=True)
             link_form = SurlForm(user=request.user, allow_blank_alias=True)
-            quick_create_notice = None
+            created_link_notice = None
             created_pk = (request.GET.get('created') or '').strip()
             if created_pk.isdigit():
                 created_surl = Surl.objects.filter(pk=int(created_pk), domain__owner=request.user).only('pk', 'short_url').first()
                 if created_surl:
-                    quick_create_notice = {
+                    created_link_notice = {
                         'pk': created_surl.pk,
                         'short_url': created_surl.short_url,
                     }
@@ -516,7 +698,8 @@ def url(request):
                 surls=surls,
                 dashboard_form=dashboard_form,
                 link_form=link_form,
-                quick_create_notice=quick_create_notice,
+                created_link_notice=created_link_notice,
+                created_link_keep_adding_href='#quick-create',
             )
             return render(request,'common/dashboard.html',context=context)    
 
@@ -530,6 +713,8 @@ def links(request):
         domains, surls = get_owned_objects(request)
         selected_domain_id = (request.GET.get('domain') or '').strip()
         search_query = (request.GET.get('q') or '').strip()
+        created_link_notice = None
+        created_pk = (request.GET.get('created') or '').strip()
         if selected_domain_id:
             surls = surls.filter(domain_id=selected_domain_id)
         if search_query:
@@ -541,6 +726,13 @@ def links(request):
                 | Q(domain__name__icontains=search_query)
             )
         surls = surls.order_by('-visit_counts')
+        if created_pk.isdigit():
+            created_surl = Surl.objects.filter(pk=int(created_pk), domain__owner=request.user).only('pk', 'short_url').first()
+            if created_surl:
+                created_link_notice = {
+                    'pk': created_surl.pk,
+                    'short_url': created_surl.short_url,
+                }
         dashboard_form = SurlForm(user=request.user, allow_blank_alias=True)
         link_form = SurlForm(user=request.user, allow_blank_alias=True)
         context = build_url_context(
@@ -550,6 +742,8 @@ def links(request):
             link_form=link_form,
             selected_domain_id=selected_domain_id,
             search_query=search_query,
+            created_link_notice=created_link_notice,
+            created_link_keep_adding_href='#links-create',
         )
         return render(request, 'common/links.html', context=context)
 
@@ -562,6 +756,7 @@ def url_create(request):
         is_quick_create = request.POST.get('mode') == 'quick'
         form = SurlForm(request.POST, user=request.user, allow_blank_alias=True)
         redirect_target = request.POST.get('next') or 'common:links'
+        active_tab = (request.POST.get('active_tab') or '').strip()
         template_name = 'common/dashboard.html' if str(redirect_target).startswith('/_common_/url') else 'common/links.html'
         if form.is_valid():
             surl = form.save(commit=False)
@@ -584,10 +779,8 @@ def url_create(request):
                 surl.validate_unique()
                 surl.save()
                 if is_quick_create:
-                    messages.success(request, f"URL {surl.short_url}이 등록되었습니다.")
                     dashboard_url = reverse('common:url')
                     return redirect(f'{dashboard_url}?created={surl.pk}')
-                messages.success(request, f"URL {surl.short_url}이 등록되었습니다.")
             except ValidationError as e:
                 domains, surls = get_owned_objects(request)
                 context = build_url_context(
@@ -609,7 +802,10 @@ def url_create(request):
             return render(request, template_name, context=context)
 
         if redirect_target.startswith('/'):
-            return redirect(redirect_target)
+            redirect_path = append_tab_to_path(redirect_target, active_tab)
+            if not is_quick_create:
+                redirect_path = append_query_params_to_path(redirect_path, created=surl.pk)
+            return redirect(redirect_path)
         return redirect(redirect_target)
 
     return HttpResponse('url created.')
@@ -1004,6 +1200,7 @@ def url_edit(request,pk):
 def domain_create(request):
     if request.user.is_authenticated:
         form = DomainForm(request.POST)
+        active_tab = (request.POST.get('active_tab') or '').strip()
         if form.is_valid():
             domain = form.save(commit=False)
             domain.name = form.cleaned_data['name']
@@ -1012,7 +1209,7 @@ def domain_create(request):
             domain.host_allowed = False
             domain.save()
             messages.success(request, f"도메인 {domain.name}이 등록되었습니다.")
-            return redirect('common:domain_list')
+            return redirect_with_tab('common:domain_list', tab=active_tab)
 
         domains, surls = get_owned_objects(request)
         context = {'domains': domains, 'form': form}

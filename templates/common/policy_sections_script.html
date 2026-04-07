@@ -1,0 +1,34 @@
+<script>
+    (function () {
+        var cards = Array.prototype.slice.call(document.querySelectorAll('[data-policy-card]'));
+        if (!cards.length) {
+            return;
+        }
+
+        function isFallbackAction(value) {
+            return value === 'fallback';
+        }
+
+        function isMessageAction(value) {
+            return value === 'message' || value === 'show_message';
+        }
+
+        cards.forEach(function (card) {
+            var select = card.querySelector('.policy-action-select');
+            var fallbackField = card.querySelector('[data-policy-target="fallback"]');
+            var messageField = card.querySelector('[data-policy-target="message"]');
+            if (!select || !fallbackField || !messageField) {
+                return;
+            }
+
+            function updateVisibility() {
+                var value = select.value;
+                fallbackField.hidden = !isFallbackAction(value);
+                messageField.hidden = !isMessageAction(value);
+            }
+
+            select.addEventListener('change', updateVisibility);
+            updateVisibility();
+        });
+    }());
+</script>
