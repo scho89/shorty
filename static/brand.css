@@ -42,6 +42,10 @@ body {
     line-height: 1.6;
 }
 
+body.global-quick-create-open {
+    overflow: hidden;
+}
+
 a {
     color: inherit;
     text-decoration: none;
@@ -1946,6 +1950,94 @@ select {
     flex-wrap: wrap;
 }
 
+.global-quick-create {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 40;
+}
+
+.global-quick-create-launcher {
+    display: inline-grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 20px;
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.18), transparent 45%),
+        linear-gradient(135deg, var(--primary), #4f8df8);
+    color: white;
+    box-shadow: 0 18px 36px rgba(37, 99, 235, 0.22);
+    cursor: pointer;
+}
+
+.global-quick-create-launcher-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.18);
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.global-quick-create-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.32);
+    backdrop-filter: blur(3px);
+}
+
+.global-quick-create-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(440px, 100vw);
+    height: 100vh;
+    border-left: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: var(--shadow-lg);
+    overflow-y: auto;
+}
+
+.global-quick-create-panel-inner {
+    display: grid;
+    gap: 22px;
+    min-height: 100%;
+    padding: 28px 24px 32px;
+}
+
+.global-quick-create-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.global-quick-create-header h2 {
+    margin: 0 0 8px;
+    letter-spacing: -0.04em;
+}
+
+.global-quick-create-header p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.global-quick-create-close {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: white;
+    color: var(--ink);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
 @media (max-width: 980px) {
     .hero-grid,
     .dashboard-layout,
@@ -2148,5 +2240,16 @@ select {
 
     .timeline-mobile-summary {
         display: block;
+    }
+
+    .global-quick-create {
+        right: 14px;
+        left: 14px;
+        bottom: 14px;
+    }
+
+    .global-quick-create-launcher {
+        width: 58px;
+        margin-left: auto;
     }
 }

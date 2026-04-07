@@ -592,6 +592,15 @@ def append_query_params_to_path(path, **params):
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
+def stash_global_quick_create_state(request, redirect_target):
+    post_data = request.POST.copy()
+    post_data.pop('csrfmiddlewaretoken', None)
+    request.session['global_quick_create_state'] = {
+        'next': redirect_target,
+        'data': post_data.dict(),
+    }
+
+
 @login_required(login_url='common:login')
 def settings_page(request):
     context = build_settings_context(request)
@@ -753,7 +762,9 @@ def links(request):
 @require_POST
 def url_create(request):
     if request.user.is_authenticated:
-        is_quick_create = request.POST.get('mode') == 'quick'
+        mode = (request.POST.get('mode') or '').strip()
+        is_quick_create = mode == 'quick'
+        is_global_quick_create = mode == 'global_quick'
         form = SurlForm(request.POST, user=request.user, allow_blank_alias=True)
         redirect_target = request.POST.get('next') or 'common:links'
         active_tab = (request.POST.get('active_tab') or '').strip()
@@ -761,12 +772,15 @@ def url_create(request):
         if form.is_valid():
             surl = form.save(commit=False)
             surl.domain = form.cleaned_data['domain']
-            if is_quick_create:
+            if is_quick_create or is_global_quick_create:
                 surl.is_active = True
             surl.alias = (surl.alias or '').strip()
             surl.short_url = str(surl.domain.name) + "/" + surl.alias
             if not surl.alias and not assign_unique_alias(surl):
                 form.add_error('alias', 'Could not generate a unique alias. Please try again.')
+                if is_global_quick_create and redirect_target.startswith('/'):
+                    stash_global_quick_create_state(request, redirect_target)
+                    return redirect(redirect_target)
                 domains, surls = get_owned_objects(request)
                 context = build_url_context(
                     domains=domains,
@@ -782,6 +796,9 @@ def url_create(request):
                     dashboard_url = reverse('common:url')
                     return redirect(f'{dashboard_url}?created={surl.pk}')
             except ValidationError as e:
+                if is_global_quick_create and redirect_target.startswith('/'):
+                    stash_global_quick_create_state(request, redirect_target)
+                    return redirect(redirect_target)
                 domains, surls = get_owned_objects(request)
                 context = build_url_context(
                     domains=domains,
@@ -792,6 +809,9 @@ def url_create(request):
                 )
                 return render(request, template_name, context=context)
         else:
+            if is_global_quick_create and redirect_target.startswith('/'):
+                stash_global_quick_create_state(request, redirect_target)
+                return redirect(redirect_target)
             domains, surls = get_owned_objects(request)
             context = build_url_context(
                 domains=domains,

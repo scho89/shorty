@@ -129,6 +129,32 @@ class SettingsPageTests(TestCase):
         self.assertContains(response, self.fallback.name)
         self.assertContains(response, 'Save fallback URL')
         self.assertContains(response, 'Workspace routing defaults')
+        self.assertContains(response, 'data-open-global-quick-create')
+        self.assertContains(response, 'name="mode" value="global_quick"')
+        self.assertContains(response, 'data-tab-target="settings-routing"')
+        self.assertContains(response, 'data-tab-target="settings-fallback-urls"')
+        self.assertNotContains(response, 'data-tab-target="settings-root"')
+
+    def test_global_quick_create_invalid_submission_returns_to_same_page_with_errors(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:url_create'),
+            {
+                'mode': 'global_quick',
+                'next': reverse('common:settings'),
+                'domain': self.domain.pk,
+                'alias': 'loop',
+                'url': 'https://settings.example.com/loop',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request['PATH_INFO'], reverse('common:settings'))
+        self.assertContains(response, 'Destination URL cannot point to a Shorty-managed domain.')
+        self.assertContains(response, 'data-global-quick-create-open="true"')
+        self.assertContains(response, 'id="global-quick-create-errors"')
 
     def test_settings_page_creates_fallback_url(self):
         self.client.force_login(self.owner)
@@ -458,7 +484,7 @@ class UrlInsightsViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Link created')
         self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
-        self.assertContains(response, 'href="#links-create"')
+        self.assertContains(response, 'data-open-global-quick-create')
 
 
 @override_settings(

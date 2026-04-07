@@ -1,0 +1,64 @@
+<script>
+    (function () {
+        var root = document.querySelector('[data-global-quick-create-root]');
+        if (!root) {
+            return;
+        }
+
+        var panel = root.querySelector('[data-global-quick-create-panel]');
+        var backdrop = root.querySelector('.global-quick-create-backdrop');
+        var openButtons = Array.prototype.slice.call(document.querySelectorAll('[data-open-global-quick-create]'));
+        var closeButtons = Array.prototype.slice.call(document.querySelectorAll('[data-close-global-quick-create]'));
+
+        if (!panel || !backdrop || !openButtons.length) {
+            return;
+        }
+
+        function openPanel() {
+            panel.hidden = false;
+            backdrop.hidden = false;
+            document.body.classList.add('global-quick-create-open');
+            var errorBox = panel.querySelector('[data-form-errors]');
+            if (errorBox) {
+                window.setTimeout(function () {
+                    errorBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 40);
+                return;
+            }
+            var firstField = panel.querySelector('select, input, textarea');
+            if (firstField) {
+                window.setTimeout(function () {
+                    firstField.focus();
+                }, 40);
+            }
+        }
+
+        function closePanel() {
+            panel.hidden = true;
+            backdrop.hidden = true;
+            document.body.classList.remove('global-quick-create-open');
+        }
+
+        openButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                openPanel();
+            });
+        });
+
+        closeButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                closePanel();
+            });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !panel.hidden) {
+                closePanel();
+            }
+        });
+
+        if (root.getAttribute('data-global-quick-create-open') === 'true') {
+            openPanel();
+        }
+    }());
+</script>
