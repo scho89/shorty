@@ -7,7 +7,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from shorty.models import ClickEvent, Domain, Surl
+from shorty.models import ClickEvent, Domain, FallbackDestination, GlobalRoutingSettings, Surl
 
 
 @override_settings(
@@ -138,6 +138,155 @@ class RedirectTests(TestCase):
         self.assertEqual(response.status_code, 410)
         self.assertEqual(surl.visit_counts, 0)
         self.assertFalse(ClickEvent.objects.filter(surl=surl).exists())
+
+    def test_missing_alias_redirects_to_domain_fallback_url(self):
+        owner = User.objects.create_user(username='missing-owner', password='pw12345!')
+        domain = Domain.objects.create(name='missing.example.com', owner=owner, is_verified=True)
+        fallback = FallbackDestination.objects.create(
+            name='Missing alias landing',
+            url='https://example.org/fallback/missing',
+            owner=owner,
+        )
+        domain.missing_alias_action = Domain.ROOT_ACTION_FALLBACK
+        domain.missing_alias_fallback = fallback
+        domain.save(update_fields=['missing_alias_action', 'missing_alias_fallback'])
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': 'unknown'}),
+            HTTP_HOST='missing.example.com',
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://example.org/fallback/missing')
+
+    def test_expired_link_redirects_to_domain_fallback_url(self):
+        owner = User.objects.create_user(username='expired-fallback-owner', password='pw12345!')
+        domain = Domain.objects.create(name='expired-fallback.example.com', owner=owner, is_verified=True)
+        fallback = FallbackDestination.objects.create(
+            name='Expired landing',
+            url='https://example.org/fallback/expired',
+            owner=owner,
+        )
+        expired = Surl.objects.create(
+            alias='old',
+            url='https://example.org/old',
+            note='expired link',
+            domain=domain,
+            short_url='expired-fallback.example.com/old',
+            expires_at=timezone.now() - timedelta(minutes=5),
+        )
+        domain.expired_action = Domain.ROOT_ACTION_FALLBACK
+        domain.expired_fallback = fallback
+        domain.save(update_fields=['expired_action', 'expired_fallback'])
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': expired.alias}),
+            HTTP_HOST='expired-fallback.example.com',
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://example.org/fallback/expired')
+        self.assertFalse(ClickEvent.objects.filter(surl=expired).exists())
+
+    def test_inactive_link_redirects_to_domain_fallback_url(self):
+        owner = User.objects.create_user(username='inactive-fallback-owner', password='pw12345!')
+        domain = Domain.objects.create(name='inactive-fallback.example.com', owner=owner, is_verified=True)
+        fallback = FallbackDestination.objects.create(
+            name='Inactive landing',
+            url='https://example.org/fallback/inactive',
+            owner=owner,
+        )
+        inactive = Surl.objects.create(
+            alias='paused',
+            url='https://example.org/paused',
+            note='inactive link',
+            domain=domain,
+            short_url='inactive-fallback.example.com/paused',
+            is_active=False,
+        )
+        domain.inactive_action = Domain.ROOT_ACTION_FALLBACK
+        domain.inactive_fallback = fallback
+        domain.save(update_fields=['inactive_action', 'inactive_fallback'])
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': inactive.alias}),
+            HTTP_HOST='inactive-fallback.example.com',
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://example.org/fallback/inactive')
+        self.assertFalse(ClickEvent.objects.filter(surl=inactive).exists())
+
+    def test_domain_root_redirects_to_configured_fallback_url(self):
+        owner = User.objects.create_user(username='root-link-owner', password='pw12345!')
+        domain = Domain.objects.create(
+            name='root-link.example.com',
+            owner=owner,
+            is_verified=True,
+            root_action=Domain.ROOT_ACTION_FALLBACK,
+        )
+        fallback = FallbackDestination.objects.create(
+            name='Root landing',
+            url='https://example.org/fallback/root',
+            owner=owner,
+        )
+        domain.root_fallback = fallback
+        domain.save(update_fields=['root_fallback'])
+
+        response = self.client.get('/', HTTP_HOST='root-link.example.com')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://example.org/fallback/root')
+
+    def test_global_missing_alias_policy_applies_when_domain_inherits(self):
+        owner = User.objects.create_user(username='global-owner', password='pw12345!')
+        domain = Domain.objects.create(name='global.example.com', owner=owner, is_verified=True)
+        fallback = FallbackDestination.objects.create(
+            name='Global missing',
+            url='https://example.org/fallback/global-missing',
+            owner=owner,
+        )
+        GlobalRoutingSettings.objects.create(
+            owner=owner,
+            missing_alias_action=Domain.ROOT_ACTION_FALLBACK,
+            missing_alias_fallback=fallback,
+        )
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': 'missing'}),
+            HTTP_HOST='global.example.com',
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://example.org/fallback/global-missing')
+
+    def test_domain_override_wins_over_global_policy(self):
+        owner = User.objects.create_user(username='override-owner', password='pw12345!')
+        domain = Domain.objects.create(
+            name='override.example.com',
+            owner=owner,
+            is_verified=True,
+            missing_alias_action=Domain.MESSAGE_ACTION,
+            missing_alias_message='Domain override copy',
+        )
+        fallback = FallbackDestination.objects.create(
+            name='Global fallback',
+            url='https://example.org/fallback/global',
+            owner=owner,
+        )
+        GlobalRoutingSettings.objects.create(
+            owner=owner,
+            missing_alias_action=Domain.ROOT_ACTION_FALLBACK,
+            missing_alias_fallback=fallback,
+        )
+
+        response = self.client.get(
+            reverse('shorty:alias', kwargs={'alias': 'missing'}),
+            HTTP_HOST='override.example.com',
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, 'Domain override copy', status_code=404)
 
 
 @override_settings(

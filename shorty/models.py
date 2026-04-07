@@ -9,17 +9,90 @@ from dns.resolver import NoAnswer, resolve
 # Create your models here.
 
 class Domain(models.Model):
+    POLICY_ACTION_INHERIT = 'inherit'
+    ROOT_ACTION_DASHBOARD = 'dashboard'
+    ROOT_ACTION_FALLBACK = 'fallback'
+    ROOT_ACTION_SHOW_MESSAGE = 'show_message'
+    ROOT_ACTION_INHERIT = POLICY_ACTION_INHERIT
+    MESSAGE_ACTION = 'message'
+    POLICY_ACTION_CHOICES = [
+        (POLICY_ACTION_INHERIT, 'Use global default'),
+        (ROOT_ACTION_FALLBACK, 'Redirect to fallback URL'),
+        (MESSAGE_ACTION, 'Show message'),
+    ]
+    ROOT_ACTION_CHOICES = [
+        (ROOT_ACTION_INHERIT, 'Use global default'),
+        (ROOT_ACTION_DASHBOARD, 'Open Shorty dashboard'),
+        (ROOT_ACTION_FALLBACK, 'Redirect to registered fallback URL'),
+        (ROOT_ACTION_SHOW_MESSAGE, 'Show message page'),
+    ]
+
     name = models.CharField(max_length=64)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     is_verified = models.BooleanField(default=False)
     dns_txt = models.CharField(max_length=50,null=True,blank=True)
     last_ownership_check = models.DateTimeField(null=True,blank=True)
     host_allowed = models.BooleanField(default=False)
+    root_action = models.CharField(
+        max_length=32,
+        choices=ROOT_ACTION_CHOICES,
+        default=ROOT_ACTION_INHERIT,
+    )
+    root_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='domain_root_fallbacks',
+    )
+    root_message = models.CharField(max_length=255, blank=True)
+    missing_alias_action = models.CharField(
+        max_length=32,
+        choices=POLICY_ACTION_CHOICES,
+        default=POLICY_ACTION_INHERIT,
+    )
+    missing_alias_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='domain_missing_alias_fallbacks',
+    )
+    missing_alias_message = models.CharField(max_length=255, blank=True)
+    inactive_action = models.CharField(
+        max_length=32,
+        choices=POLICY_ACTION_CHOICES,
+        default=POLICY_ACTION_INHERIT,
+    )
+    inactive_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='domain_inactive_fallbacks',
+    )
+    inactive_message = models.CharField(max_length=255, blank=True)
+    expired_action = models.CharField(
+        max_length=32,
+        choices=POLICY_ACTION_CHOICES,
+        default=POLICY_ACTION_INHERIT,
+    )
+    expired_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='domain_expired_fallbacks',
+    )
+    expired_message = models.CharField(max_length=255, blank=True)
     
     VERIFY_INTERVAL = 5
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return f'https://{self.name}/'
     
     def create_dns_txt(self):
         return "shorty-"+get_random_string(length=30)
@@ -108,3 +181,91 @@ class ClickEvent(models.Model):
         indexes = [
             models.Index(fields=['surl', 'created_at'], name='shorty_click_surl_created_idx'),
         ]
+
+
+class FallbackDestination(models.Model):
+    name = models.CharField(max_length=120)
+    url = models.URLField(max_length=2048)
+    note = models.CharField(max_length=255, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['name', 'pk']
+        constraints = [
+            models.UniqueConstraint(fields=['owner', 'name'], name='shorty_unique_fallback_name_per_owner'),
+        ]
+
+    def __str__(self):
+        return f'{self.name} -> {self.url}'
+
+
+class GlobalRoutingSettings(models.Model):
+    owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name='global_routing_settings')
+    root_action = models.CharField(
+        max_length=32,
+        choices=[
+            (Domain.ROOT_ACTION_DASHBOARD, 'Open Shorty dashboard'),
+            (Domain.ROOT_ACTION_FALLBACK, 'Redirect to fallback URL'),
+            (Domain.ROOT_ACTION_SHOW_MESSAGE, 'Show message'),
+        ],
+        default=Domain.ROOT_ACTION_DASHBOARD,
+    )
+    root_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='global_root_fallbacks',
+    )
+    root_message = models.CharField(max_length=255, blank=True)
+    missing_alias_action = models.CharField(
+        max_length=32,
+        choices=[
+            (Domain.ROOT_ACTION_FALLBACK, 'Redirect to fallback URL'),
+            (Domain.MESSAGE_ACTION, 'Show message'),
+        ],
+        default=Domain.MESSAGE_ACTION,
+    )
+    missing_alias_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='global_missing_alias_fallbacks',
+    )
+    missing_alias_message = models.CharField(max_length=255, blank=True)
+    inactive_action = models.CharField(
+        max_length=32,
+        choices=[
+            (Domain.ROOT_ACTION_FALLBACK, 'Redirect to fallback URL'),
+            (Domain.MESSAGE_ACTION, 'Show message'),
+        ],
+        default=Domain.MESSAGE_ACTION,
+    )
+    inactive_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='global_inactive_fallbacks',
+    )
+    inactive_message = models.CharField(max_length=255, blank=True)
+    expired_action = models.CharField(
+        max_length=32,
+        choices=[
+            (Domain.ROOT_ACTION_FALLBACK, 'Redirect to fallback URL'),
+            (Domain.MESSAGE_ACTION, 'Show message'),
+        ],
+        default=Domain.MESSAGE_ACTION,
+    )
+    expired_fallback = models.ForeignKey(
+        'FallbackDestination',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='global_expired_fallbacks',
+    )
+    expired_message = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f'Global routing settings for {self.owner}'

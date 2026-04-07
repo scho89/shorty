@@ -1,0 +1,21 @@
+<script>
+    (function () {
+        var errorBox = document.querySelector('[data-form-errors]');
+        if (!errorBox) {
+            return;
+        }
+
+        var targetId = errorBox.getAttribute('id');
+        if (targetId) {
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', '#' + targetId);
+            } else {
+                window.location.hash = targetId;
+            }
+        }
+
+        window.setTimeout(function () {
+            errorBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+    }());
+</script>

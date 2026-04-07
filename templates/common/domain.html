@@ -6,7 +6,7 @@
         <div>
             <div class="section-label">Domains</div>
             <h1>Domain management</h1>
-            <p>Register, verify, and manage the domains used for branded short links. The setup panel stays separate from the registry so the page feels more like an operations dashboard than a landing page.</p>
+            <p>Register, verify, and manage the domains used for branded short links.</p>
         </div>
     </section>
 
@@ -28,72 +28,83 @@
         </div>
     </section>
 
-    <section class="dashboard-shell">
-        <aside class="dashboard-sidebar">
-            {% include "common/domain_form.html" %}
-            <div class="card">
-                <div class="section-label">Process</div>
-                <h2>Verify before use</h2>
-                <p>Add the DNS token for a pending domain, then run verification to move it into the active list.</p>
-            </div>
+    <section class="tabs-layout" data-tab-group>
+        <aside class="tabs-nav" role="tablist" aria-label="Domain sections">
+            <button class="tabs-nav-button is-active" type="button" data-tab-button data-tab-target="domains-library" role="tab" aria-controls="domains-library" aria-selected="true">All domains</button>
+            <button class="tabs-nav-button" type="button" data-tab-button data-tab-target="domains-create" role="tab" aria-controls="domains-create" aria-selected="false">Add domain</button>
         </aside>
-        <div class="dashboard-content">
-            <div class="table-card">
-            <div class="table-header">
-                <div class="table-header-copy">
-                    <div class="section-label">Inventory</div>
-                    <h2>Domain registry</h2>
-                    <p>See which domains are active, pending, or ready for verification.</p>
+
+        <div class="tabs-content">
+            <section class="tab-panel" id="domains-library" data-tab-panel role="tabpanel">
+                <div class="table-card">
+                    <div class="table-header">
+                        <div class="table-header-copy">
+                            <div class="section-label">Inventory</div>
+                            <h2>Domain registry</h2>
+                            <p>See which domains are active, pending, or ready for verification.</p>
+                        </div>
+                        <div class="table-meta">{{ domains|length }} total</div>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table domain-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Links</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for domain in domains %}
+                                <tr class="clickable-row" data-href="{% url 'common:domain_settings' pk=domain.pk %}" tabindex="0">
+                                    <td>
+                                        <div class="library-primary-cell">
+                                            <span class="chip">{{ domain.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="status-cell">
+                                        {% if domain.is_verified %}
+                                        <span class="status-chip success">Verified</span>
+                                        {% else %}
+                                        <div class="library-destination-cell">
+                                            <strong>Pending verification</strong>
+                                            <span>DNS token ready in detail view</span>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ domain.link_count }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3">
+                                        <div class="empty-card">No domains yet. Register a branded host to start publishing custom short links.</div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="table-meta">{{ domains|length }} total</div>
-            </div>
-            <div class="table-scroll">
-                <table class="data-table domain-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for domain in domains %}
-                        <tr>
-                            <td><span class="chip">{{ domain.name }}</span></td>
-                            <td class="status-cell">
-                                {% if domain.is_verified %}
-                                <span class="status-chip success">Verified</span>
-                                {% else %}
-                                <span class="status-token">{{ domain.dns_txt }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="inline-actions">
-                                    {% if not domain.is_verified %}
-                                    <form method="post" action="{% url 'common:domain_verify' pk=domain.pk %}">
-                                        {% csrf_token %}
-                                        <button class="button-warning" type="submit">Verify</button>
-                                    </form>
-                                    {% endif %}
-                                    <form method="post" action="{% url 'common:domain_delete' pk=domain.pk %}">
-                                        {% csrf_token %}
-                                        <button class="button-danger" type="submit" onclick="return confirm('Deleting this domain also removes all linked short URLs. Continue?');">Delete</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="3">
-                                <div class="empty-card">No domains yet. Register a branded host to start publishing custom short links.</div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            </div>
+            </section>
+
+            <section class="tab-panel {% if form.errors or e or err %}has-errors{% endif %}" id="domains-create" data-tab-panel role="tabpanel" hidden>
+                <div class="tab-panel-stack">
+                    {% include "common/domain_form.html" %}
+                    <div class="card">
+                        <div class="section-label">Process</div>
+                        <h2>Verify before use</h2>
+                        <p>Add the DNS token for a pending domain, then run verification to move it into the active list.</p>
+                    </div>
+                </div>
+            </section>
         </div>
     </section>
 </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    {% include 'common/tabs_script.html' %}
+    {% include 'common/form_error_focus_script.html' %}
+    {% include 'common/clickable_row_script.html' %}
 {% endblock %}

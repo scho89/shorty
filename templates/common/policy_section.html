@@ -1,0 +1,34 @@
+<div class="policy-card" data-policy-card>
+    <div class="policy-card-header">
+        <div>
+            <div class="section-label">Policy</div>
+            <h3>{{ section.title }}</h3>
+            <p>{{ section.description }}</p>
+        </div>
+    </div>
+    <div class="field-grid policy-grid">
+        <div class="field-group">
+            <label for="{{ section.action_field.id_for_label }}">{{ section.action_field.label }}</label>
+            {{ section.action_field }}
+            {% if section.action_field.errors %}
+            <div class="alert-box">{{ section.action_field.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field-group policy-target-field" data-policy-target="fallback">
+            <label for="{{ section.fallback_field.id_for_label }}">{{ section.fallback_field.label }}</label>
+            {{ section.fallback_field }}
+            {% if section.fallback_field.errors %}
+            <div class="alert-box">{{ section.fallback_field.errors }}</div>
+            {% endif %}
+            <p class="field-hint">Select one of the fallback URLs registered in Settings.</p>
+        </div>
+    </div>
+    <div class="field-group policy-target-field" data-policy-target="message">
+        <label for="{{ section.message_field.id_for_label }}">{{ section.message_field.label }}</label>
+        {{ section.message_field }}
+        {% if section.message_field.errors %}
+        <div class="alert-box">{{ section.message_field.errors }}</div>
+        {% endif %}
+        <p class="field-hint">This message appears when the policy is set to show a message.</p>
+    </div>
+</div>
