@@ -16,6 +16,7 @@
         {% include "message.html" %}
         {% block content %}{% endblock %}
     </div>
+    {% include "common/global_quick_create.html" %}
     <script>
         (function () {
             var menus = Array.prototype.slice.call(document.querySelectorAll('.nav-menu'));
@@ -62,6 +63,7 @@
             });
         }());
     </script>
+    {% include "common/global_quick_create_script.html" %}
     {% block script %}{% endblock %}
 </body>
 </html>

@@ -23,29 +23,26 @@
         </div>
         <div class="stat-card">
             <strong>{{ global_policy_sections|length }}</strong>
-            <span>Global policy tabs</span>
-            <p>Workspace defaults are split by routing state for easier editing.</p>
+            <span>Routing states</span>
+            <p>Workspace defaults cover root, missing alias, inactive, and expired traffic.</p>
         </div>
     </section>
 
     <section class="tabs-layout" data-tab-group>
         <aside class="tabs-nav" role="tablist" aria-label="Settings sections">
-            {% for section in global_policy_sections %}
-            <button class="tabs-nav-button {% if forloop.first %}is-active{% endif %}" type="button" data-tab-button data-tab-target="settings-{{ section.key }}" role="tab" aria-controls="settings-{{ section.key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">{{ section.title }}</button>
-            {% endfor %}
+            <button class="tabs-nav-button is-active" type="button" data-tab-button data-tab-target="settings-routing" role="tab" aria-controls="settings-routing" aria-selected="true">Routing</button>
             <button class="tabs-nav-button" type="button" data-tab-button data-tab-target="settings-fallback-urls" role="tab" aria-controls="settings-fallback-urls" aria-selected="false">Fallback URLs</button>
         </aside>
 
         <div class="tabs-content">
             <form method="post" action="{% url 'common:global_routing_settings_update' %}" class="form-stack">
                 {% csrf_token %}
-                {% for section in global_policy_sections %}
-                <section class="tab-panel {% if section.action_field.errors or section.fallback_field.errors or section.message_field.errors or global_settings_form.non_field_errors %}has-errors{% endif %}" id="settings-{{ section.key }}" data-tab-panel role="tabpanel" {% if not forloop.first %}hidden{% endif %}>
+                <section class="tab-panel{% if global_settings_form.non_field_errors %} has-errors{% endif %}{% for section in global_policy_sections %}{% if section.action_field.errors or section.fallback_field.errors or section.message_field.errors %} has-errors{% endif %}{% endfor %}" id="settings-routing" data-tab-panel role="tabpanel">
                     <div class="card settings-card">
                         <div>
                             <div class="section-label">Global defaults</div>
-                            <h2>Workspace {{ section.title|lower }} policy</h2>
-                            <p>Workspace routing defaults apply to every domain unless a domain settings page overrides this state with its own choice.</p>
+                            <h2>Workspace routing defaults</h2>
+                            <p>These defaults apply to every domain unless a domain settings page overrides a specific routing state with its own choice.</p>
                         </div>
                         {% if global_settings_form.non_field_errors %}
                         <div class="alert-box">
@@ -54,13 +51,12 @@
                             {% endfor %}
                         </div>
                         {% endif %}
-                        {% include 'common/policy_section.html' with section=section %}
+                        {% include 'common/policy_sections.html' with policy_sections=global_policy_sections %}
                         <div class="button-row">
                             <button class="button" type="submit">Save global defaults</button>
                         </div>
                     </div>
                 </section>
-                {% endfor %}
             </form>
 
             <section class="tab-panel {% if fallback_form.non_field_errors or fallback_form.name.errors or fallback_form.url.errors or fallback_form.note.errors %}has-errors{% endif %}" id="settings-fallback-urls" data-tab-panel role="tabpanel" hidden>

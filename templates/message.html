@@ -8,7 +8,9 @@
         </div>
         <div class="button-row">
             <a class="button" href="{% url 'common:url_stats' pk=created_link_notice.pk %}">Open details</a>
-            {% if created_link_keep_adding_href %}
+            {% if global_quick_create_available %}
+            <button class="button-secondary" type="button" data-open-global-quick-create>Keep adding</button>
+            {% elif created_link_keep_adding_href %}
             <a class="button-secondary" href="{{ created_link_keep_adding_href }}">Keep adding</a>
             {% endif %}
         </div>
