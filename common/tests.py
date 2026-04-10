@@ -131,6 +131,9 @@ class SettingsPageTests(TestCase):
         self.assertContains(response, 'Workspace routing defaults')
         self.assertContains(response, 'data-open-global-quick-create')
         self.assertContains(response, 'name="mode" value="global_quick"')
+        self.assertContains(response, 'data-short-url-preview-card')
+        self.assertContains(response, 'data-short-url-domain')
+        self.assertContains(response, 'data-short-url-alias')
         self.assertContains(response, 'data-tab-target="settings-routing"')
         self.assertContains(response, 'data-tab-target="settings-fallback-urls"')
         self.assertNotContains(response, 'data-tab-target="settings-root"')
@@ -155,6 +158,14 @@ class SettingsPageTests(TestCase):
         self.assertContains(response, 'Destination URL cannot point to a Shorty-managed domain.')
         self.assertContains(response, 'data-global-quick-create-open="true"')
         self.assertContains(response, 'id="global-quick-create-errors"')
+
+    def test_global_quick_create_form_does_not_include_note_field(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:settings'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="global-quick-note"')
 
     def test_settings_page_creates_fallback_url(self):
         self.client.force_login(self.owner)
@@ -465,6 +476,19 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
         self.assertNotContains(response, f'href="{self.surl.url}"')
 
+    def test_dashboard_hover_panel_shows_clicks_and_hides_empty_note(self):
+        self.client.force_login(self.owner)
+        self.surl.note = ''
+        self.surl.visit_counts = 7
+        self.surl.save(update_fields=['note', 'visit_counts'])
+
+        response = self.client.get(reverse('common:url'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<strong>Clicks</strong>', html=False)
+        self.assertContains(response, '<span class="hover-detail-value">7</span>', html=False)
+        self.assertNotContains(response, '<strong>Note</strong>', html=False)
+
     def test_links_page_routes_to_detail_view(self):
         self.client.force_login(self.owner)
 
@@ -475,6 +499,17 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
         self.assertContains(response, 'data-tab-target="links-library"')
         self.assertContains(response, 'data-tab-target="links-create"')
+
+    def test_edit_page_hides_tabs_and_shows_form_only(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url_edit', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Edit short link')
+        self.assertNotContains(response, 'data-tab-target="links-library"')
+        self.assertNotContains(response, 'data-tab-target="links-create"')
+        self.assertNotContains(response, 'All short links')
 
     def test_links_page_shows_created_notice_with_detail_button(self):
         self.client.force_login(self.owner)
@@ -523,6 +558,14 @@ class QuickCreateTests(TestCase):
         self.assertRedirects(response, f"{reverse('common:url')}?created={created.pk}")
         self.assertContains(response, created.short_url)
         self.assertContains(response, 'Open details')
+
+    def test_dashboard_quick_create_form_does_not_include_note_field(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="quick-note"')
 
     def test_links_create_generates_alias_when_blank(self):
         self.client.force_login(self.owner)

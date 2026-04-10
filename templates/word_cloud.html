@@ -6,24 +6,7 @@
         {% if top_links %}
         <div class="leaderboard">
             {% for item in top_links %}
-            <a class="leaderboard-item" href="{% url 'common:url_stats' pk=item.pk %}">
-                <span class="leaderboard-rank">#{{ item.rank }}</span>
-                <span class="leaderboard-main">
-                    <strong>{{ item.alias }}</strong>
-                    <span>{{ item.domain_name }}</span>
-                </span>
-                <span class="leaderboard-metric">{{ item.visit_counts }} visits</span>
-                <span class="hover-detail-panel">
-                    <span class="hover-detail-row">
-                        <strong>Destination</strong>
-                        <span class="hover-detail-value">{{ item.url }}</span>
-                    </span>
-                    <span class="hover-detail-row">
-                        <strong>Note</strong>
-                        <span class="hover-detail-value">{{ item.note }}</span>
-                    </span>
-                </span>
-            </a>
+            {% include 'common/insight_link_card.html' with item=item variant='leaderboard' %}
             {% endfor %}
         </div>
         {% else %}
@@ -38,23 +21,7 @@
         {% if rising_links %}
         <div class="mini-list">
             {% for item in rising_links %}
-            <a class="mini-list-item" href="{% url 'common:url_stats' pk=item.pk %}">
-                <span class="mini-list-copy">
-                    <strong>{{ item.alias }}</strong>
-                    <span>{{ item.recent_total }} this week, {{ item.previous_total }} last week</span>
-                </span>
-                <span class="mini-list-metric positive">+{{ item.delta }}</span>
-                <span class="hover-detail-panel">
-                    <span class="hover-detail-row">
-                        <strong>Destination</strong>
-                        <span class="hover-detail-value">{{ item.url }}</span>
-                    </span>
-                    <span class="hover-detail-row">
-                        <strong>Note</strong>
-                        <span class="hover-detail-value">{{ item.note }}</span>
-                    </span>
-                </span>
-            </a>
+            {% include 'common/insight_link_card.html' with item=item variant='rising' %}
             {% endfor %}
         </div>
         {% else %}

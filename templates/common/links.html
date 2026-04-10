@@ -5,11 +5,21 @@
     <section class="app-header">
         <div>
             <div class="section-label">Links</div>
+            {% if "/_common_/url/edit/" in request.path %}
+            <h1>Edit link</h1>
+            <p>Update this short link without the extra library navigation.</p>
+            {% else %}
             <h1>Link management</h1>
             <p>Create, filter, and manage short links from one clean workspace.</p>
+            {% endif %}
         </div>
     </section>
 
+    {% if "/_common_/url/edit/" in request.path %}
+    <section>
+        {% include "common/url_form.html" %}
+    </section>
+    {% else %}
     <section class="metrics-row">
         <div class="stat-card">
             <strong>{{ surls|length }}</strong>
@@ -30,12 +40,12 @@
 
     <section class="tabs-layout" data-tab-group>
         <aside class="tabs-nav" role="tablist" aria-label="Links sections">
-            <button class="tabs-nav-button is-active" type="button" data-tab-button data-tab-target="links-library" role="tab" aria-controls="links-library" aria-selected="true">All links</button>
-            <button class="tabs-nav-button" type="button" data-tab-button data-tab-target="links-create" role="tab" aria-controls="links-create" aria-selected="false">Create link</button>
+            <button class="tabs-nav-button{% if not "/_common_/url/edit/" in request.path %} is-active{% endif %}" type="button" data-tab-button data-tab-target="links-library" role="tab" aria-controls="links-library" aria-selected="{% if "/_common_/url/edit/" in request.path %}false{% else %}true{% endif %}">All links</button>
+            <button class="tabs-nav-button{% if "/_common_/url/edit/" in request.path %} is-active{% endif %}" type="button" data-tab-button data-tab-target="links-create" role="tab" aria-controls="links-create" aria-selected="{% if "/_common_/url/edit/" in request.path %}true{% else %}false{% endif %}">Create link</button>
         </aside>
 
         <div class="tabs-content">
-            <section class="tab-panel" id="links-library" data-tab-panel role="tabpanel">
+            <section class="tab-panel{% if not "/_common_/url/edit/" in request.path %} is-active{% endif %}" id="links-library" data-tab-panel role="tabpanel">
                 <div class="table-card">
                     <div class="table-header">
                         <div class="table-header-copy">
@@ -129,11 +139,12 @@
                 </div>
             </section>
 
-            <section class="tab-panel {% if link_form.errors or e %}has-errors{% endif %}" id="links-create" data-tab-panel role="tabpanel" hidden>
+            <section class="tab-panel{% if link_form.errors or e %} has-errors{% endif %}{% if "/_common_/url/edit/" in request.path %} is-active{% endif %}" id="links-create" data-tab-panel role="tabpanel"{% if not "/_common_/url/edit/" in request.path %} hidden{% endif %}>
                 {% include "common/url_form.html" %}
             </section>
         </div>
     </section>
+    {% endif %}
 </div>
 {% endblock %}
 
