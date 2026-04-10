@@ -3,11 +3,11 @@
     {% if "/_common_/url/edit/" in request.path %}
     <h2>Edit short link</h2>
     <p>Keep the same creation flow, then adjust advanced settings below when needed.</p>
-    <form method="post" action="{% url 'common:url_edit' pk=surl.id %}" class="form-stack">
+    <form method="post" action="{% url 'common:url_edit' pk=surl.id %}" class="form-stack form-stack-compact">
     {% else %}
     <h2>Create short link</h2>
     <p>Start with the domain and destination, then add the alias and optional details below.</p>
-    <form method="post" action="{% url 'common:url_create' %}" class="form-stack">
+    <form method="post" action="{% url 'common:url_create' %}" class="form-stack form-stack-compact">
     {% endif %}
         {% csrf_token %}
         {% if not "/_common_/url/edit/" in request.path %}

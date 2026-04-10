@@ -906,19 +906,26 @@ def get_url_insights(surls):
     }
 
 
+def build_insight_link_payload(surl, **extra):
+    note = (surl.note or '').strip()
+    payload = {
+        'pk': surl.pk,
+        'alias': surl.alias,
+        'short_url': surl.short_url,
+        'url': surl.url,
+        'note': note,
+        'has_note': bool(note),
+        'visit_counts': surl.visit_counts,
+        'domain_name': surl.domain.name,
+    }
+    payload.update(extra)
+    return payload
+
+
 def build_top_links(surls):
     ranked = sorted(surls, key=lambda surl: (-surl.visit_counts, surl.alias.lower()))
     return [
-        {
-            'pk': surl.pk,
-            'rank': index,
-            'alias': surl.alias,
-            'short_url': surl.short_url,
-            'url': surl.url,
-            'note': surl.note or 'No note',
-            'visit_counts': surl.visit_counts,
-            'domain_name': surl.domain.name,
-        }
+        build_insight_link_payload(surl, rank=index)
         for index, surl in enumerate(ranked[:3], start=1)
     ]
 
@@ -957,17 +964,12 @@ def build_rising_links(surls):
         if recent_total <= 0 or delta <= 0:
             continue
 
-        rising.append({
-            'pk': surl.pk,
-            'alias': surl.alias,
-            'short_url': surl.short_url,
-            'url': surl.url,
-            'note': surl.note or 'No note',
-            'domain_name': surl.domain.name,
-            'recent_total': recent_total,
-            'previous_total': previous_total,
-            'delta': delta,
-        })
+        rising.append(build_insight_link_payload(
+            surl,
+            recent_total=recent_total,
+            previous_total=previous_total,
+            delta=delta,
+        ))
 
     rising.sort(key=lambda item: (-item['delta'], -item['recent_total'], item['alias'].lower()))
     return rising[:5]

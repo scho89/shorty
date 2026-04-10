@@ -573,9 +573,17 @@ select {
     margin-top: 20px;
 }
 
+.form-stack-compact {
+    gap: 15px;
+}
+
 .field-group {
     display: grid;
     gap: 8px;
+}
+
+.form-stack-compact .field-group {
+    gap: 6px;
 }
 
 .field-grid {
@@ -699,6 +707,13 @@ select {
     border-radius: 14px;
     background: white;
     color: var(--ink);
+}
+
+.form-stack-compact .input,
+.form-stack-compact .select {
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 13px;
 }
 
 .input-datetime {
