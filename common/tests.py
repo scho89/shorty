@@ -676,6 +676,15 @@ class AuthRecaptchaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context['user'].is_authenticated)
 
+    @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')
+    def test_login_page_shows_short_url_intro_panel(self):
+        response = self.client.get(reverse('common:login'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Long URLs, made shorter and easier.')
+        self.assertContains(response, 'Original URL')
+        self.assertContains(response, 'Short URL')
+
 
 @override_settings(
     ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
