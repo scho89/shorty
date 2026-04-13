@@ -3,10 +3,39 @@
 {% block body_class %}auth-page{% endblock %}
 
 {% block content %}
-<section class="auth-shell">
+<section class="auth-shell auth-shell-split">
+    <div class="auth-intro-card">
+        <div class="section-label">Why Shorty</div>
+        <h1 class="auth-intro-title">Long URLs, made shorter and easier.</h1>
+        <p class="auth-intro-copy">Turn hard-to-read original URLs into clean short links that are easier to share, easier to open, and easier to trust.</p>
+        <div class="auth-url-story">
+            <div class="sample-reveal-stage sample-reveal-stage-1" aria-hidden="true">
+                <div class="sample-reveal-card sample-reveal-card-before">
+                    <span class="auth-url-label">Original URL</span>
+                    <strong>https://example.com/resources/team/onboarding/launch-guide?channel=mail&amp;source=campaign</strong>
+                </div>
+                <div class="sample-reveal-divider"></div>
+                <div class="sample-reveal-card sample-reveal-card-after">
+                    <span class="auth-url-label">Short URL</span>
+                    <strong>go.example.com/start</strong>
+                </div>
+            </div>
+        </div>
+        <div class="auth-intro-points">
+            <div class="auth-intro-point">
+                <strong>Shorter to share</strong>
+                <span>Clean links are easier to send across chat, email, and documents.</span>
+            </div>
+            <div class="auth-intro-point">
+                <strong>Easier to read</strong>
+                <span>People can understand and trust a simple link at a glance.</span>
+            </div>
+        </div>
+    </div>
+
     <div class="auth-card">
         <div class="section-label">Welcome back</div>
-        <h1 class="auth-title">Sign in</h1>
+        <h2 class="auth-title">Sign in</h2>
         <p>Use your account to manage short links, domains, and routing settings.</p>
         <form method="post" action="{% url 'common:login' %}" class="form-stack">
             {% csrf_token %}

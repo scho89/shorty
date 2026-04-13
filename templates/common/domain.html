@@ -18,8 +18,8 @@
         </div>
         <div class="stat-card">
             <strong>{% for domain in domains %}{% if domain.is_verified %}{{ forloop.counter0|add:1 }}{% endif %}{% empty %}0{% endfor %}</strong>
-            <span>Verified</span>
-            <p>Ready to be used in published short links.</p>
+            <span>Ownership verified</span>
+            <p>Domains that have completed the TXT ownership check.</p>
         </div>
         <div class="stat-card">
             <strong>{{ domains|length }}</strong>
@@ -64,11 +64,18 @@
                                     </td>
                                     <td class="status-cell">
                                         {% if domain.is_verified %}
-                                        <span class="status-chip success">Verified</span>
+                                            {% if domain.host_allowed %}
+                                        <span class="status-chip success">Ready</span>
+                                            {% else %}
+                                        <div class="library-destination-cell">
+                                            <strong>Ownership verified</strong>
+                                            <span>Add the CNAME record and run the CNAME check</span>
+                                        </div>
+                                            {% endif %}
                                         {% else %}
                                         <div class="library-destination-cell">
-                                            <strong>Pending verification</strong>
-                                            <span>DNS token ready in detail view</span>
+                                            <strong>Ownership verification pending</strong>
+                                            <span>TXT token ready in detail view</span>
                                         </div>
                                         {% endif %}
                                     </td>
@@ -92,8 +99,8 @@
                     {% include "common/domain_form.html" %}
                     <div class="card">
                         <div class="section-label">Process</div>
-                        <h2>Verify before use</h2>
-                        <p>Add the DNS token for a pending domain, then run verification to move it into the active list.</p>
+                        <h2>Verify ownership first</h2>
+                        <p>First complete the TXT ownership check. After that, point the host to the required CNAME target and run the CNAME status check.</p>
                     </div>
                 </div>
             </section>

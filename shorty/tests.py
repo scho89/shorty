@@ -25,11 +25,39 @@ class DomainVerificationTests(TestCase):
             last_ownership_check=timezone.now(),
         )
 
-        with patch('shorty.models.resolve') as mock_resolve:
+        with patch('shorty.models.resolve_dns') as mock_resolve:
             result = domain.verify_ownership()
 
         self.assertEqual(result, 1)
         mock_resolve.assert_not_called()
+
+    @override_settings(DNS_RESOLVER_NAMESERVERS=['8.8.8.8', '1.1.1.1'])
+    def test_custom_dns_resolver_uses_configured_nameservers(self):
+        from shorty.models import get_dns_resolver
+
+        resolver = get_dns_resolver()
+
+        self.assertEqual([str(item) for item in resolver.nameservers], ['8.8.8.8', '1.1.1.1'])
+
+    def test_ownership_verification_succeeds_with_txt_only(self):
+        owner = User.objects.create_user(username='txt-owner', password='pw12345!')
+        domain = Domain.objects.create(
+            name='txt-only.example.com',
+            owner=owner,
+            dns_txt='shorty-test-token',
+        )
+
+        class FakeAnswer:
+            def __init__(self, value):
+                self.value = value
+
+            def to_text(self):
+                return self.value
+
+        with patch('shorty.models.resolve_dns', return_value=[FakeAnswer('"shorty-test-token"')]):
+            result = domain.verify_ownership()
+
+        self.assertEqual(result, 0)
 
 
 @override_settings(

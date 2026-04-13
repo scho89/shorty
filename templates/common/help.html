@@ -25,24 +25,24 @@
         <div class="card">
             <div class="section-label">Step 2</div>
             <h2>Prove ownership</h2>
-            <p>After registration, Shorty shows a DNS TXT verification value in the domain registry. Add that exact value to your DNS zone and then run verification from the app.</p>
+            <p>After registration, Shorty shows a DNS TXT verification value in the domain registry. Add that exact value to your DNS zone and complete ownership verification before changing the host to a CNAME.</p>
             <ol class="help-list">
-                <li>Copy the TXT value shown in the <strong>Status</strong> column.</li>
+                <li>Copy the TXT value shown in the <strong>Domain settings</strong> page.</li>
                 <li>Create a DNS <code>TXT</code> record for the same host.</li>
                 <li>Wait for DNS propagation.</li>
-                <li>Select <strong>Verify</strong> in the domain registry.</li>
+                <li>Select <strong>Verify domain</strong> to confirm ownership.</li>
             </ol>
         </div>
 
         <div class="card">
             <div class="section-label">Step 3</div>
             <h2>Set the CNAME record</h2>
-            <p>The short-link host must also point to the current routing target below.</p>
+            <p>After ownership is verified, update the host so it points to the current routing target below and then run the CNAME status check.</p>
             <div class="code-block">
                 <div><strong>Record type</strong>: <code>CNAME</code></div>
                 <div><strong>Target</strong>: <code>{{ cname_target }}</code></div>
             </div>
-            <p>Example: if the short domain is <code>t.example.com</code>, create a <code>CNAME</code> for <code>t</code> that points to <code>{{ cname_target }}</code>.</p>
+            <p>Example: if the short domain is <code>t.example.com</code>, change <code>t</code> so it points to <code>{{ cname_target }}</code> and then run <strong>Check CNAME status</strong>.</p>
         </div>
 
         <div class="card">
@@ -51,8 +51,9 @@
             <ul class="help-list">
                 <li>The domain is listed on the <strong>Domains</strong> page.</li>
                 <li>The TXT ownership record has been added.</li>
+                <li>Ownership verification has completed successfully.</li>
                 <li>The <code>CNAME</code> points to <code>{{ cname_target }}</code>.</li>
-                <li>The status shows <strong>Verified</strong>.</li>
+                <li>The CNAME status check has passed.</li>
                 <li>You can then create short links from the dashboard.</li>
             </ul>
         </div>

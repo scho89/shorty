@@ -26,6 +26,16 @@ def global_shorty_context(request):
                 'short_url': created_surl.short_url,
             }
 
+    created_domain_notice = None
+    created_domain_pk = (request.GET.get('created_domain') or '').strip()
+    if created_domain_pk.isdigit():
+        created_domain = Domain.objects.filter(pk=int(created_domain_pk), owner=request.user).only('pk', 'name').first()
+        if created_domain:
+            created_domain_notice = {
+                'pk': created_domain.pk,
+                'name': created_domain.name,
+            }
+
     verified_domains = Domain.objects.filter(owner=request.user, is_verified=True).order_by('name')
 
     return {
@@ -34,4 +44,5 @@ def global_shorty_context(request):
         'global_quick_create_domains': verified_domains,
         'global_quick_create_open': open_widget,
         'created_link_notice': created_link_notice,
+        'created_domain_notice': created_domain_notice,
     }

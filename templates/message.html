@@ -1,6 +1,6 @@
 {% if created_link_notice %}
 <div class="flash-stack">
-    <div class="card quick-create-notice-card alert-auto-dismissible" data-created-link-notice>
+    <div class="card notice-card flash-message alert-success alert-auto-dismissible" data-created-link-notice>
         <div>
             <div class="section-label">Link created</div>
             <h2>{{ created_link_notice.short_url }}</h2>
@@ -18,17 +18,38 @@
 </div>
 {% endif %}
 
+{% if created_domain_notice %}
+<div class="flash-stack">
+    <div class="card notice-card flash-message alert-success alert-auto-dismissible" data-created-domain-notice>
+        <div>
+            <div class="section-label">Domain added</div>
+            <h2>{{ created_domain_notice.name }}</h2>
+            <p>The domain has been added. Open the detail page to verify ownership or keep adding more domains.</p>
+        </div>
+        <div class="button-row">
+            <a class="button" href="{% url 'common:domain_settings' pk=created_domain_notice.pk %}">Open details</a>
+            <a class="button-secondary" href="{% url 'common:domain_list' %}?tab=domains-create">Keep adding</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if messages %}
 <div class="flash-stack">
     {% for message in messages %}
-    <div class="flash-message alert-auto-dismissible">
-        {{ message }}
+    <div class="card notice-card flash-message {{ message.tags|default:'alert-info' }} alert-auto-dismissible">
+        <div>
+            <div class="section-label">
+                {% if 'success' in message.tags %}Success{% elif 'error' in message.tags or 'danger' in message.tags %}Error{% elif 'warning' in message.tags %}Warning{% else %}Notice{% endif %}
+            </div>
+            <p class="notice-body">{{ message }}</p>
+        </div>
     </div>
     {% endfor %}
 </div>
 {% endif %}
 
-{% if created_link_notice or messages %}
+{% if created_link_notice or created_domain_notice or messages %}
 <script>
     window.setTimeout(function () {
         document.querySelectorAll(".alert-auto-dismissible").forEach(function (el) {
