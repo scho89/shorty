@@ -1563,6 +1563,7 @@ select {
     background: var(--surface-soft);
     display: grid;
     gap: 12px;
+    align-content: start;
 }
 
 .insight-card h3 {
@@ -1845,108 +1846,191 @@ select {
     text-transform: uppercase;
 }
 
-.auth-url-arrow {
-    position: relative;
-    overflow: hidden;
-    display: inline-flex;
+.auth-url-transform {
+    display: grid;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px 8px 10px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, rgba(37, 99, 235, 0.04), rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.04));
-    animation: auth-arrow-glide 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    padding: 4px 2px;
 }
 
-.auth-url-arrow::before {
+.auth-transform-rail {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 10px 6px;
+}
+
+.auth-transform-line {
+    position: relative;
+    flex: 1 1 auto;
+    height: 14px;
+    border-radius: 999px;
+    background:
+        linear-gradient(90deg, rgba(191, 219, 254, 0.36), rgba(96, 165, 250, 0.72), rgba(37, 99, 235, 0.3));
+    overflow: hidden;
+}
+
+.auth-transform-line::before {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 28%, rgba(255, 255, 255, 0.78) 50%, rgba(255, 255, 255, 0.2) 72%, transparent 100%);
-    transform: translateX(-130%);
-    animation: auth-arrow-flow 2.2s ease-in-out infinite;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0,
+            rgba(255, 255, 255, 0) 18px,
+            rgba(255, 255, 255, 0.38) 18px,
+            rgba(255, 255, 255, 0.38) 32px
+        );
+    transform: translateX(-36px);
+    animation: auth-transform-line-flow 2.6s linear infinite;
 }
 
-.auth-url-arrow span {
+.auth-transform-dot {
     position: relative;
     z-index: 1;
-    width: 10px;
-    height: 10px;
-    border-top: 2px solid rgba(37, 99, 235, 0.32);
-    border-right: 2px solid rgba(37, 99, 235, 0.32);
-    transform: rotate(45deg);
-    animation: auth-arrow-step 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: white;
+    border: 3px solid rgba(37, 99, 235, 0.4);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.14);
 }
 
-.auth-url-arrow span:nth-child(2) {
-    animation-delay: 0.18s;
+.auth-transform-dot-end {
+    border-color: rgba(37, 99, 235, 0.85);
 }
 
-.auth-url-arrow span:nth-child(3) {
-    animation-delay: 0.36s;
+.auth-transform-payload {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    z-index: 1;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 152px;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(37, 99, 235, 0.14);
+    color: var(--primary-strong);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.14);
+    animation: auth-transform-payload-move 3.1s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
-@keyframes auth-arrow-flow {
+.auth-transform-payload::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.56) 40%, rgba(255, 255, 255, 0) 100%);
+    transform: translateX(-120%);
+    animation: auth-transform-payload-sheen 3.1s ease-in-out infinite;
+}
+
+.auth-transform-payload-long,
+.auth-transform-payload-short {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.2s ease;
+}
+
+.auth-transform-payload-long {
+    opacity: 1;
+    animation: auth-transform-label-long 3.1s ease-in-out infinite;
+}
+
+.auth-transform-payload-short {
+    opacity: 0;
+    animation: auth-transform-label-short 3.1s ease-in-out infinite;
+}
+
+@keyframes auth-transform-line-flow {
     0% {
-        transform: translateX(-130%);
-        opacity: 0;
+        transform: translateX(-36px);
     }
+    100% {
+        transform: translateX(36px);
+    }
+}
+
+@keyframes auth-transform-payload-move {
+    0%,
+    12% {
+        left: 10px;
+        width: 152px;
+        transform: translateY(-50%) scale(0.98);
+        opacity: 0.96;
+    }
+    44% {
+        left: calc(50% - 18px);
+        width: 132px;
+        transform: translateY(-50%) scale(1);
+        opacity: 1;
+    }
+    72% {
+        left: calc(100% - 86px);
+        width: 92px;
+        transform: translateY(-50%) scale(1.03);
+        opacity: 1;
+    }
+    100% {
+        left: calc(100% - 86px);
+        width: 92px;
+        transform: translateY(-50%) scale(0.99);
+        opacity: 0.96;
+    }
+}
+
+@keyframes auth-transform-payload-sheen {
+    0%,
     18% {
-        opacity: 0.35;
+        transform: translateX(-120%);
+        opacity: 0;
     }
-    50% {
-        transform: translateX(0%);
-        opacity: 1;
+    48% {
+        transform: translateX(-10%);
+        opacity: 0.9;
     }
-    82% {
-        opacity: 0.35;
-    }
+    76%,
     100% {
-        transform: translateX(130%);
+        transform: translateX(120%);
         opacity: 0;
     }
 }
 
-@keyframes auth-arrow-glide {
+@keyframes auth-transform-label-long {
     0%,
+    48% {
+        opacity: 1;
+    }
+    64%,
     100% {
-        transform: translateX(0);
-    }
-    35% {
-        transform: translateX(6px);
-    }
-    60% {
-        transform: translateX(10px);
-    }
-    78% {
-        transform: translateX(4px);
+        opacity: 0;
     }
 }
 
-@keyframes auth-arrow-step {
+@keyframes auth-transform-label-short {
     0%,
+    52% {
+        opacity: 0;
+    }
+    72%,
     100% {
-        border-top-color: rgba(37, 99, 235, 0.28);
-        border-right-color: rgba(37, 99, 235, 0.28);
-        transform: rotate(45deg) translateX(0) scale(0.96);
-        opacity: 0.5;
-    }
-    22% {
-        border-top-color: rgba(37, 99, 235, 0.42);
-        border-right-color: rgba(37, 99, 235, 0.42);
-        transform: rotate(45deg) translateX(1px) scale(1);
-        opacity: 0.72;
-    }
-    45% {
-        border-top-color: rgba(37, 99, 235, 0.9);
-        border-right-color: rgba(37, 99, 235, 0.9);
-        transform: rotate(45deg) translateX(5px) scale(1.08);
         opacity: 1;
-    }
-    68% {
-        border-top-color: rgba(37, 99, 235, 0.5);
-        border-right-color: rgba(37, 99, 235, 0.5);
-        transform: rotate(45deg) translateX(2px) scale(1.01);
-        opacity: 0.78;
     }
 }
 
