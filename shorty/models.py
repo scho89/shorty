@@ -1,10 +1,29 @@
 from datetime import timedelta
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from dns.exception import DNSException
-from dns.resolver import NoAnswer, resolve
+from dns.resolver import NoAnswer, Resolver
+
+
+def get_dns_resolver():
+    nameservers = [
+        str(nameserver).strip()
+        for nameserver in getattr(settings, 'DNS_RESOLVER_NAMESERVERS', [])
+        if str(nameserver).strip()
+    ]
+    if not nameservers:
+        return Resolver()
+
+    resolver = Resolver(configure=False)
+    resolver.nameservers = nameservers
+    return resolver
+
+
+def resolve_dns(name, record_type):
+    return get_dns_resolver().resolve(name, record_type)
 
 # Create your models here.
 
@@ -96,6 +115,40 @@ class Domain(models.Model):
     
     def create_dns_txt(self):
         return "shorty-"+get_random_string(length=30)
+
+    @staticmethod
+    def normalize_dns_value(value):
+        return (value or '').strip().rstrip('.').lower()
+
+    @classmethod
+    def get_expected_cname_target(cls):
+        return cls.normalize_dns_value(getattr(settings, 'CNAME_HOST_TARGET', ''))
+
+    def get_cname_status(self):
+        expected_target = self.get_expected_cname_target()
+        status = {
+            'configured': bool(expected_target),
+            'expected_target': expected_target,
+            'resolved_targets': [],
+            'matches': False,
+        }
+
+        if not expected_target:
+            return status
+
+        try:
+            answers_cname = resolve_dns(self.name, 'CNAME')
+        except (NoAnswer, DNSException):
+            return status
+
+        resolved_targets = [
+            normalized
+            for normalized in (self.normalize_dns_value(answer.to_text()) for answer in answers_cname)
+            if normalized
+        ]
+        status['resolved_targets'] = resolved_targets
+        status['matches'] = expected_target in resolved_targets
+        return status
     
     def verify_ownership(self):
         # code 0: confirmed
@@ -105,16 +158,13 @@ class Domain(models.Model):
             return 1
 
         try:
-            answers_txt = resolve(self.name, 'TXT')
-            answers_cname = resolve(self.name, 'CNAME')
+            answers_txt = resolve_dns(self.name, 'TXT')
         except (NoAnswer, DNSException):
             return 2
 
         for answer in answers_txt:
             if self.dns_txt and self.dns_txt in answer.to_text():
-                for cname_answer in answers_cname:
-                    if '443.scho.kr' in cname_answer.to_text():
-                        return 0
+                return 0
         return 2
     
     # def save(self, *args, **kwargs):
@@ -132,7 +182,7 @@ class Surl(models.Model):
         max_length=128,
         unique=True,
         error_messages={
-            "unique": "단축 URL이 이미 존재합니다. Domain과 alias를 확인하십시오.",
+            "unique": "That short URL already exists. Check the domain and alias.",
         },)
     visit_counts = models.IntegerField(default=0)
 

@@ -31,6 +31,8 @@ SECRET_KEY = env('SECRET_KEY', default='dev-only-insecure-secret-key')
 RECAPTCHA_SECRET = env('RECAPTCHA_SECRET', default='')
 RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
 SSL_LIST = env('SSL_LIST', default='')
+CNAME_HOST_TARGET = env('CNAME_HOST_TARGET', default='443.scho.kr')
+DNS_RESOLVER_NAMESERVERS = env.list('DNS_RESOLVER_NAMESERVERS', default=[])
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)

@@ -1,5 +1,6 @@
 from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
+from unittest.mock import patch
 
 from django.core import mail
 from django.core.cache import cache
@@ -354,7 +355,28 @@ class SettingsPageTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, f"{reverse('common:domain_list')}?tab=domains-create")
+        self.assertTrue(response.url.startswith(f"{reverse('common:domain_list')}?"))
+        self.assertIn('tab=domains-create', response.url)
+        self.assertIn('created_domain=', response.url)
+
+    def test_domain_create_shows_action_notice_card(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:domain_create'),
+            {
+                'name': 'brand-new.example.com',
+                'active_tab': 'domains-create',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        created_domain = Domain.objects.get(name='brand-new.example.com')
+        self.assertContains(response, 'Domain added')
+        self.assertContains(response, 'Open details')
+        self.assertContains(response, reverse('common:domain_settings', kwargs={'pk': created_domain.pk}))
+        self.assertContains(response, 'Keep adding')
 
     def test_domain_settings_page_shows_verify_and_delete_actions(self):
         self.client.force_login(self.owner)
@@ -363,10 +385,85 @@ class SettingsPageTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Delete domain')
-        self.assertContains(response, 'Domain verified')
+        self.assertContains(response, 'Current password')
+        self.assertContains(response, 'Service configuration')
+        self.assertNotContains(response, 'Ownership verification pending')
         self.assertContains(response, 'data-tab-target="domain-overview"')
         self.assertContains(response, 'data-tab-target="domain-routing"')
         self.assertNotContains(response, 'data-tab-target="domain-root"')
+
+    def test_domain_delete_requires_current_password(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:domain_delete', kwargs={'pk': self.domain.pk}),
+            {
+                'next': reverse('common:domain_settings', kwargs={'pk': self.domain.pk}),
+                'confirm_password': '',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Domain.objects.filter(pk=self.domain.pk).exists())
+        self.assertContains(response, 'Enter your current password to delete this domain.')
+
+    def test_domain_delete_rejects_wrong_password(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:domain_delete', kwargs={'pk': self.domain.pk}),
+            {
+                'next': reverse('common:domain_settings', kwargs={'pk': self.domain.pk}),
+                'confirm_password': 'wrong-password',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Domain.objects.filter(pk=self.domain.pk).exists())
+        self.assertContains(response, 'The password you entered is incorrect.')
+
+    def test_pending_domain_settings_hide_service_configuration_until_verified(self):
+        self.client.force_login(self.owner)
+        self.domain.is_verified = False
+        self.domain.host_allowed = False
+        self.domain.dns_txt = 'shorty-test-token'
+        self.domain.save(update_fields=['is_verified', 'host_allowed', 'dns_txt'])
+
+        response = self.client.get(reverse('common:domain_settings', kwargs={'pk': self.domain.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ownership verification pending')
+        self.assertNotContains(response, 'Service configuration')
+        self.assertContains(response, 'DNS TXT token')
+
+    @override_settings(CNAME_HOST_TARGET='edge.shorty.test')
+    def test_domain_settings_cname_check_reports_success(self):
+        self.client.force_login(self.owner)
+
+        class FakeAnswer:
+            def __init__(self, value):
+                self.value = value
+
+            def to_text(self):
+                return self.value
+
+        with patch('shorty.models.resolve_dns', return_value=[FakeAnswer('edge.shorty.test.')]):
+            response = self.client.post(
+                reverse('common:domain_check_cname', kwargs={'pk': self.domain.pk}),
+                {
+                    'next': reverse('common:domain_settings', kwargs={'pk': self.domain.pk}),
+                },
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request['PATH_INFO'], reverse('common:domain_settings', kwargs={'pk': self.domain.pk}))
+        self.assertContains(response, 'CNAME check passed.')
+        self.assertContains(response, 'is ready to serve traffic')
+        self.domain.refresh_from_db()
+        self.assertTrue(self.domain.host_allowed)
 
 
 @override_settings(

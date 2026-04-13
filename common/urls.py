@@ -22,6 +22,7 @@ urlpatterns = [
     path('domain/', views.domain_list, name='domain_list'),
     path('domain/<int:pk>/settings/', views.domain_settings, name='domain_settings'),
     path('domain/<int:pk>/settings/update/', views.domain_settings_update, name='domain_settings_update'),
+    path('domain/<int:pk>/settings/check-cname/', views.domain_check_cname, name='domain_check_cname'),
     path('url/', views.url, name='url'),
     path('links/', views.links, name='links'),
     path('url/create/', views.url_create, name='url_create'),

@@ -354,21 +354,71 @@ select {
     margin: 18px 0 0;
 }
 
-.flash-message {
+.card.notice-card,
+.card.flash-message,
+.notice-card,
+.flash-message,
+.alert-box {
+    display: grid;
+    gap: 8px;
     padding: 16px 18px;
-    border-radius: 14px;
-    border: 1px solid var(--line);
-    background: var(--surface);
+    border-radius: 18px;
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 42%),
+        rgba(255, 255, 255, 0.96);
+    color: var(--ink);
     box-shadow: var(--shadow-md);
 }
 
-.flash-message.alert-success {
-    border-color: rgba(19, 138, 82, 0.2);
+.card.notice-card strong,
+.card.flash-message strong,
+.notice-card strong,
+.flash-message strong,
+.alert-box strong {
+    color: inherit;
 }
 
+.card.notice-card.alert-success,
+.card.flash-message.alert-success,
+.notice-card.alert-success,
+.flash-message.alert-success {
+    border-color: rgba(19, 138, 82, 0.18);
+    background:
+        radial-gradient(circle at top right, rgba(19, 138, 82, 0.1), transparent 42%),
+        rgba(255, 255, 255, 0.96);
+}
+
+.card.notice-card.alert-danger,
+.card.notice-card.alert-error,
+.card.flash-message.alert-danger,
+.card.flash-message.alert-error,
+.notice-card.alert-danger,
+.notice-card.alert-error,
 .flash-message.alert-danger,
-.flash-message.alert-error {
-    border-color: rgba(198, 61, 61, 0.22);
+.flash-message.alert-error,
+.alert-box {
+    border-color: rgba(198, 61, 61, 0.18);
+    background:
+        radial-gradient(circle at top right, rgba(198, 61, 61, 0.1), transparent 42%),
+        rgba(255, 255, 255, 0.96);
+}
+
+.card.notice-card.alert-warning,
+.card.flash-message.alert-warning,
+.notice-card.alert-warning,
+.flash-message.alert-warning {
+    border-color: rgba(194, 122, 18, 0.2);
+    background:
+        radial-gradient(circle at top right, rgba(194, 122, 18, 0.1), transparent 42%),
+        rgba(255, 255, 255, 0.96);
+}
+
+.card.notice-card.alert-info,
+.card.flash-message.alert-info,
+.notice-card.alert-info,
+.flash-message.alert-info {
+    border-color: rgba(37, 99, 235, 0.18);
 }
 
 .page-grid {
@@ -647,9 +697,17 @@ select {
     margin-top: 4px;
 }
 
-.quick-create-notice-card {
+.card.notice-card,
+.notice-card {
     display: grid;
     gap: 14px;
+}
+
+.notice-body {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.96rem;
+    line-height: 1.55;
 }
 
 .short-url-preview-card {
@@ -2059,6 +2117,100 @@ select {
     font-size: 0.88rem;
 }
 
+.sample-reveal-stage {
+    position: relative;
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 12px 30px rgba(18, 32, 51, 0.05);
+}
+
+.sample-reveal-stage {
+    min-height: 250px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.sample-reveal-stage-1 .sample-reveal-card-before {
+    animation: sample-reveal-crossfade-before 2.8s ease-in-out infinite alternate;
+}
+
+.sample-reveal-stage-1 .sample-reveal-card-after {
+    animation: sample-reveal-crossfade-after 2.8s ease-in-out infinite alternate;
+}
+
+.sample-reveal-stage-1 .sample-reveal-divider {
+    display: none;
+}
+
+.sample-reveal-card {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    display: grid;
+    gap: 10px;
+    padding: 20px 22px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    box-shadow: 0 16px 28px rgba(18, 32, 51, 0.08);
+}
+
+.sample-reveal-card strong {
+    font-family: "Consolas", "Courier New", monospace;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.sample-reveal-card-before {
+    top: 24px;
+    color: #475569;
+}
+
+.sample-reveal-card-after {
+    bottom: 24px;
+    color: var(--primary-strong);
+}
+
+.sample-reveal-divider {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 2px;
+    height: calc(100% - 80px);
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0), rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0));
+    transform: translate(-50%, -50%);
+}
+
+@keyframes sample-reveal-crossfade-before {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+        filter: blur(0);
+    }
+    100% {
+        transform: translateY(-10px) scale(0.95);
+        opacity: 0.28;
+        filter: blur(1.2px);
+    }
+}
+
+@keyframes sample-reveal-crossfade-after {
+    0% {
+        transform: translateY(10px) scale(0.95);
+        opacity: 0.34;
+        filter: blur(1px);
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
 .auth-card {
     width: min(100%, 560px);
     padding: 36px;
@@ -2196,14 +2348,6 @@ select {
     margin: 0 0 12px;
     font-size: clamp(1.9rem, 3vw, 2.5rem);
     letter-spacing: -0.04em;
-}
-
-.alert-box {
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(198, 61, 61, 0.2);
-    background: rgba(198, 61, 61, 0.06);
-    color: var(--danger);
 }
 
 .empty-card {
@@ -2551,6 +2695,29 @@ select {
     .auth-card,
     .auth-intro-card {
         padding: 24px;
+    }
+
+    .sample-reveal-stage {
+        min-height: 220px;
+        padding: 18px 16px;
+    }
+
+    .sample-reveal-card {
+        width: calc(100% - 20px);
+        max-width: none;
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+
+    .sample-reveal-card {
+        padding: 16px 16px;
+        border-radius: 20px;
+    }
+
+    .sample-reveal-card strong {
+        font-size: 0.88rem;
+        line-height: 1.5;
     }
 
     .table-header {

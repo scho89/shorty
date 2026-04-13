@@ -34,44 +34,71 @@
                                 <p>Links currently published on this domain.</p>
                             </div>
                             <div class="stat-card">
-                                <strong>{{ fallback_options|length }}</strong>
-                                <span>Fallback URL choices</span>
-                                <p>Active registry items available for selection.</p>
+                                <strong>{% if domain.is_verified %}Ready{% else %}Pending{% endif %}</strong>
+                                <span>Ownership status</span>
+                                <p>{% if domain.is_verified %}The TXT ownership check has been completed.{% else %}Verify ownership with the TXT record before continuing.{% endif %}</p>
                             </div>
                             <div class="stat-card">
-                                <strong>{% if domain.is_verified %}Ready{% else %}Pending{% endif %}</strong>
-                                <span>Verification status</span>
-                                <p>{% if domain.is_verified %}This domain can already serve traffic.{% else %}Verify the domain before using it publicly.{% endif %}</p>
+                                <strong>{% if domain_ready %}Ready{% elif domain.host_allowed %}Checked{% else %}Pending{% endif %}</strong>
+                                <span>CNAME status</span>
+                                <p>{% if domain_ready %}The domain is ready to serve traffic.{% elif domain.host_allowed %}The CNAME target is correct. Finish ownership verification to go live.{% else %}Add the CNAME record after ownership verification, then run the status check.{% endif %}</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="quick-actions-grid">
+                        {% if not domain.is_verified %}
                         <div class="card">
-                            <div class="section-label">Verification</div>
-                            <h2>{% if domain.is_verified %}Domain verified{% else %}Domain pending verification{% endif %}</h2>
-                            {% if domain.is_verified %}
-                            <p>This domain is already verified and ready to use in published short links.</p>
-                            {% else %}
-                            <p>Add the DNS token below, then verify ownership from here instead of the domain list.</p>
+                            <div class="section-label">Ownership verification</div>
+                            <h2>Ownership verification pending</h2>
+                            <p>Add the DNS TXT token below and verify ownership first. Do not switch the host to the CNAME target until this step is complete.</p>
+                            <p class="field-hint">Step 1 uses only the TXT record. After ownership is verified, replace the TXT setup with the required CNAME and run the CNAME status check.</p>
                             <div class="code-block">
                                 <strong>DNS TXT token</strong>
                                 <div class="status-token">{{ domain.dns_txt }}</div>
                             </div>
                             <form method="post" action="{% url 'common:domain_verify' pk=domain.pk %}" class="button-row">
                                 {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'common:domain_settings' pk=domain.pk %}">
                                 <button class="button-warning" type="submit">Verify domain</button>
                             </form>
-                            {% endif %}
                         </div>
+                        {% endif %}
+
+                        {% if domain.is_verified %}
+                        <div class="card">
+                            <div class="section-label">Service configuration</div>
+                            <h2>{% if domain.host_allowed %}CNAME ready{% else %}CNAME setup required{% endif %}</h2>
+                            <p>After ownership verification, point the domain to the CNAME target below and run the status check to confirm the host is ready to serve traffic.</p>
+                            <div class="code-block">
+                                <strong>Expected CNAME target</strong>
+                                <div class="status-token">{{ cname_target|default:"Not configured" }}</div>
+                                {% if not cname_target_configured %}
+                                <p class="field-hint">Set <code>CNAME_HOST_TARGET</code> in the server settings to enable DNS target verification.</p>
+                                {% endif %}
+                            </div>
+                            <form method="post" action="{% url 'common:domain_check_cname' pk=domain.pk %}" class="button-row">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'common:domain_settings' pk=domain.pk %}">
+                                <button class="button-secondary" type="submit">Check CNAME status</button>
+                            </form>
+                        </div>
+                        {% endif %}
 
                         <div class="card">
                             <div class="section-label">Danger zone</div>
                             <h2>Delete domain</h2>
-                            <p>Deleting this domain also removes all linked short URLs. Use this only when the host is no longer needed.</p>
-                            <form method="post" action="{% url 'common:domain_delete' pk=domain.pk %}" class="button-row">
+                            <p>Deleting this domain also removes all linked short URLs. Enter your password to confirm that you want to continue.</p>
+                            <form method="post" action="{% url 'common:domain_delete' pk=domain.pk %}" class="form-stack">
                                 {% csrf_token %}
-                                <button class="button-danger" type="submit" onclick="return confirm('Deleting this domain also removes all linked short URLs. Continue?');">Delete domain</button>
+                                <input type="hidden" name="next" value="{% url 'common:domain_settings' pk=domain.pk %}">
+                                <div class="field-group">
+                                    <label for="delete-domain-password">Current password</label>
+                                    <input class="input" type="password" name="confirm_password" id="delete-domain-password" placeholder="Enter your password" autocomplete="current-password">
+                                </div>
+                                <div class="button-row">
+                                    <button class="button-danger" type="submit" onclick="return confirm('Deleting this domain also removes all linked short URLs. Continue?');">Delete domain</button>
+                                </div>
                             </form>
                         </div>
                     </div>

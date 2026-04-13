@@ -188,10 +188,14 @@ def get_recaptcha_context():
 def get_recaptcha_error_message(result):
     error_codes = result.get('error-codes', [])
     if 'recaptcha-not-configured' in error_codes:
-        return 'reCAPTCHA 설정이 누락되었습니다. 환경 변수를 확인하세요.'
+        return 'reCAPTCHA is not configured. Check the server environment settings.'
     if 'recaptcha-unavailable' in error_codes:
-        return 'reCAPTCHA 검증 서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.'
-    return 'reCAPTCHA가 완료되지 않았습니다. 확인 후 다시 시도하세요.'
+        return 'The reCAPTCHA verification service is unavailable right now. Please try again shortly.'
+    return 'Please complete the reCAPTCHA check and try again.'
+
+def get_cname_host_target():
+    return (getattr(settings, 'CNAME_HOST_TARGET', '') or '').strip()
+
 
 def signin(request):
     
@@ -210,19 +214,17 @@ def signin(request):
             user = authenticate(request,username=username,password=password)
             
             if user is not None:
-                messages.success(request, '로그인 성공')
+                messages.success(request, 'Signed in successfully.')
                 login(request, user)
                 return redirect('common:url')
             
             else:
-                messages.error(request, '아이디 혹은 비밀번호가 올바르지 않습니다.')
+                messages.error(request, 'The username or password is incorrect.')
                 
         else:
             messages.error(request, get_recaptcha_error_message(result))
     
     return render(request, 'common/login.html', get_recaptcha_context())
-    
-
 def signup(request):
     if request.method == "POST":
         form = UserForm(request.POST)
@@ -238,7 +240,7 @@ def signup(request):
                 raw_password = form.cleaned_data.get('password1')
                 user = authenticate(username=username, password=raw_password)
                 login(request, user)
-                messages.success(request,"가입 완료")
+                messages.success(request, 'Account created successfully.')
                 return redirect('common:url')
             
         else:
@@ -322,8 +324,10 @@ def assign_unique_alias(surl, max_attempts=10):
 
 
 def help_page(request):
+    cname_target = get_cname_host_target()
     context = {
-        'cname_target': '443.scho.kr',
+        'cname_target': cname_target,
+        'cname_target_configured': bool(cname_target),
     }
     return render(request, 'common/help.html', context)
 
@@ -653,15 +657,23 @@ def fallback_destination_delete(request, pk):
 def domain_settings(request, pk):
     domain = get_owned_domain(request, pk)
     form = DomainRoutingSettingsForm(instance=domain, owner=request.user)
+    context = build_domain_settings_context(request, domain, form)
+    return render(request, 'common/domain_settings.html', context)
+
+
+def build_domain_settings_context(request, domain, form):
     fallback_options = FallbackDestination.objects.filter(owner=request.user).order_by('name', 'pk')
-    context = {
+    cname_target = get_cname_host_target()
+    return {
         'domain': domain,
         'form': form,
         'fallback_options': fallback_options,
         'link_count': Surl.objects.filter(domain=domain).count(),
         'policy_sections': build_policy_sections(form, domain.name, include_inherit=True),
+        'cname_target': cname_target,
+        'cname_target_configured': bool(cname_target),
+        'domain_ready': bool(domain.is_verified and domain.host_allowed),
     }
-    return render(request, 'common/domain_settings.html', context)
 
 
 @login_required(login_url='common:login')
@@ -669,21 +681,59 @@ def domain_settings(request, pk):
 def domain_settings_update(request, pk):
     domain = get_owned_domain(request, pk)
     form = DomainRoutingSettingsForm(request.POST, instance=domain, owner=request.user)
-    fallback_options = FallbackDestination.objects.filter(owner=request.user).order_by('name', 'pk')
     active_tab = (request.POST.get('active_tab') or '').strip()
     if form.is_valid():
         form.save()
         messages.success(request, f'Domain settings for {domain.name} were updated.')
         return redirect_with_tab('common:domain_settings', kwargs={'pk': domain.pk}, tab=active_tab)
 
-    context = {
-        'domain': domain,
-        'form': form,
-        'fallback_options': fallback_options,
-        'link_count': Surl.objects.filter(domain=domain).count(),
-        'policy_sections': build_policy_sections(form, domain.name, include_inherit=True),
-    }
+    context = build_domain_settings_context(request, domain, form)
     return render(request, 'common/domain_settings.html', context)
+
+
+@login_required(login_url='common:login')
+@require_POST
+def domain_check_cname(request, pk):
+    domain = get_owned_domain(request, pk)
+    status = domain.get_cname_status()
+    redirect_target = append_tab_to_path(
+        request.POST.get('next') or reverse('common:domain_settings', kwargs={'pk': domain.pk}),
+        'domain-overview',
+    )
+
+    if not status['configured']:
+        if domain.host_allowed:
+            domain.host_allowed = False
+            domain.save(update_fields=['host_allowed'])
+        messages.error(request, 'CNAME target is not configured on this server. Set CNAME_HOST_TARGET first.')
+        return redirect(redirect_target)
+
+    if status['matches']:
+        if not domain.host_allowed:
+            domain.host_allowed = True
+            domain.save(update_fields=['host_allowed'])
+        if domain.is_verified:
+            messages.success(request, f'CNAME check passed. {domain.name} points to {status["expected_target"]} and is ready to serve traffic.')
+        else:
+            messages.success(request, f'CNAME check passed. {domain.name} points to {status["expected_target"]}. Verify ownership to finish setup.')
+        return redirect(redirect_target)
+
+    if domain.host_allowed:
+        domain.host_allowed = False
+        domain.save(update_fields=['host_allowed'])
+    if status['resolved_targets']:
+        resolved_targets = ', '.join(status['resolved_targets'])
+        messages.error(
+            request,
+            f'CNAME check failed. Expected {status["expected_target"]}, but found {resolved_targets}.',
+        )
+        return redirect(redirect_target)
+
+    messages.error(
+        request,
+        f'CNAME check failed. No CNAME answer was found for {domain.name}. Expected {status["expected_target"]}.',
+    )
+    return redirect(redirect_target)
 
 
 @login_required(login_url='common:login')    
@@ -1143,8 +1193,8 @@ def url_toggle_active(request, pk):
     surl.is_active = not surl.is_active
     surl.save(update_fields=['is_active'])
 
-    state_label = '활성화' if surl.is_active else '비활성화'
-    messages.success(request, f'URL {surl.short_url}이 {state_label}되었습니다.')
+    state_label = 'enabled' if surl.is_active else 'disabled'
+    messages.success(request, f'URL {surl.short_url} was {state_label}.')
 
     redirect_target = request.POST.get('next')
     if redirect_target and redirect_target.startswith('/'):
@@ -1158,9 +1208,9 @@ def url_delete(request,pk):
         surl = get_owned_surl(request, pk)
         if surl.domain.owner.username == request.user.username:
             surl.delete()
-            messages.success(request, f"URL {surl.short_url}이 삭제되었습니다.")
+            messages.success(request, f'URL {surl.short_url} was deleted.')
         else:
-            messages.error(request, "내 소유의 주소만 삭제가 가능합니다.")
+            messages.error(request, 'Only links you own can be deleted.')
             return render(request,'common/links.html')
 
     return redirect('common:links')
@@ -1179,7 +1229,7 @@ def url_edit(request,pk):
                     try:
                         surl.validate_unique()
                         surl.save()
-                        messages.success(request,f"URL {surl.short_url}이 변경되었습니다.")
+                        messages.success(request, f'URL {surl.short_url} was updated.')
                         return redirect('common:links')
                                         
                     except ValidationError as e:
@@ -1192,7 +1242,7 @@ def url_edit(request,pk):
                             e=e,
                             surl=surl,
                         )
-                        messages.error(request,"중복된 주소가 존재합니다.")
+                        messages.error(request, 'A link with the same domain and alias already exists.')
                         return render(request,'common/links.html',context=context)    
                     
             else:
@@ -1211,7 +1261,7 @@ def url_edit(request,pk):
             return redirect('common:links')
             
         else:
-            messages.error(request,"내 소유의 주소만 편집이 가능합니다.")
+            messages.error(request, 'Only links you own can be edited.')
             return render(request,'common/links.html')    
 
     return redirect('common:links')    
@@ -1230,8 +1280,9 @@ def domain_create(request):
             domain.owner = request.user
             domain.host_allowed = False
             domain.save()
-            messages.success(request, f"도메인 {domain.name}이 등록되었습니다.")
-            return redirect_with_tab('common:domain_list', tab=active_tab)
+            redirect_path = append_tab_to_path(reverse('common:domain_list'), active_tab)
+            redirect_path = append_query_params_to_path(redirect_path, created_domain=domain.pk)
+            return redirect(redirect_path)
 
         domains, surls = get_owned_objects(request)
         context = {'domains': domains, 'form': form}
@@ -1245,11 +1296,14 @@ def domain_verify(request,pk):
     if request.user.is_authenticated:
         domain = get_object_or_404(Domain, pk=pk)
         if domain.owner.username == request.user.username:
+            redirect_target = append_tab_to_path(
+                request.POST.get('next') or reverse('common:domain_settings', kwargs={'pk': domain.pk}),
+                'domain-overview',
+            )
 
             verification = domain.verify_ownership()
             if verification == 0:
                 domain.is_verified = True
-                domain.host_allowed = True
                 domain.last_ownership_check = timezone.now()
                 domain.dns_txt = None
                 domain.save()
@@ -1258,29 +1312,25 @@ def domain_verify(request,pk):
                     with open(SSL_LIST, "a", encoding="utf-8") as f:
                         f.write(f"{domain.name}\n")
 
-                messages.success(request, f"도메인 {domain.name}이 인증되었습니다.")
-                return redirect('common:domain_list')
+                messages.success(request, f'Domain ownership for {domain.name} was verified. Add the CNAME record next and run the CNAME status check.')
+                return redirect(redirect_target)
             
             elif verification == 1:
                 # retry, time limit
                 to_retry=domain.last_ownership_check + timedelta(seconds=Domain.VERIFY_INTERVAL) - timezone.now()
-                messages.error(request,f"{to_retry.seconds:,}초 뒤에 다시 시도하세요.")
-                domains = Domain.objects.filter(owner__username=request.user.username)
-                context = {'domains':domains}
-                
-                return render(request, 'common/domain.html', context=context)
+                messages.error(request, f'Please try again in {to_retry.seconds:,} seconds.')
+                return redirect(redirect_target)
                 
             elif verification == 2:
                 # TXT not found
                 domain.last_ownership_check = timezone.now()
-                err = f"레코드를 확인할 수 없습니다."
-                domains = Domain.objects.filter(owner__username=request.user.username)
-                context = {'err':err, 'domains':domains}
+                err = 'The required DNS records could not be confirmed.'
                 domain.last_ownership_check = timezone.now()
                 domain.save()
-                return render(request, 'common/domain.html', context=context)                
+                messages.error(request, err)
+                return redirect(redirect_target)
         else:
-            messages.error(request,"내 소유의 도메인만 확인이 가능합니다.")
+            messages.error(request, 'Only domains you own can be verified.')
             return render(request, 'common/domain.html')     
                 
     else:
@@ -1292,16 +1342,27 @@ def domain_delete(request, pk):
     if request.user.is_authenticated:
         try:
             domain = Domain.objects.get(pk=pk)
+            redirect_target = append_tab_to_path(
+                request.POST.get('next') or reverse('common:domain_settings', kwargs={'pk': pk}),
+                'domain-overview',
+            )
             if domain.owner.username == request.user.username:
+                password = (request.POST.get('confirm_password') or '').strip()
+                if not password:
+                    messages.error(request, 'Enter your current password to delete this domain.')
+                    return redirect(redirect_target)
+                if not request.user.check_password(password):
+                    messages.error(request, 'The password you entered is incorrect.')
+                    return redirect(redirect_target)
                 domain.delete()
-                messages.success(request, f"도메인 {domain.name}이 삭제되었습니다.")
+                messages.success(request, f'Domain {domain.name} was deleted.')
                 return redirect('common:domain_list')
 
-            messages.error(request, "내 소유의 도메인만 삭제가 가능합니다.")
-            return redirect('common:domain_list')
+            messages.error(request, 'Only domains you own can be deleted.')
+            return redirect(redirect_target)
 
         except Domain.DoesNotExist:
-            messages.error(request, "존재하지 않는 도메인입니다.")
+            messages.error(request, 'That domain does not exist.')
             return redirect('common:domain_list')
 
     return redirect('common:domain_list')
