@@ -532,6 +532,27 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, 'campaign launch')
         self.assertContains(response, 'news.example.com')
         self.assertContains(response, 'Chrome')
+        self.assertContains(response, 'Created')
+        self.assertContains(response, 'Updated')
+        self.assertContains(response, 'Last click')
+        self.assertContains(response, 'QR code')
+        self.assertContains(response, 'Link details')
+        self.assertContains(response, 'Traffic sources')
+        self.assertContains(response, 'Recent activity')
+        self.assertNotContains(response, 'Share-ready code')
+        self.assertNotContains(response, '<div class="section-label">Details</div>', html=False)
+
+    def test_stats_view_shows_dash_for_missing_metadata(self):
+        self.client.force_login(self.owner)
+        self.surl.click_events.all().delete()
+        Surl.objects.filter(pk=self.surl.pk).update(created_at=None, updated_at=None)
+
+        response = self.client.get(reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<strong>Created</strong> -', html=True)
+        self.assertContains(response, '<strong>Updated</strong> -', html=True)
+        self.assertContains(response, '<strong>Last click</strong> -', html=True)
 
     def test_qr_code_view_returns_svg(self):
         self.client.force_login(self.owner)

@@ -1149,6 +1149,11 @@ def url_stats(request, pk):
     timeline = build_stats_timeline(surl)
     referrers = build_top_breakdown(surl, 'referrer', 'Direct / Unknown')
     browsers = build_top_breakdown(surl, 'browser', 'Unknown')
+    last_clicked_at = (
+        surl.click_events.order_by('-created_at')
+        .values_list('created_at', flat=True)
+        .first()
+    )
     recent_events = list(
         surl.click_events.order_by('-created_at').values('created_at', 'referrer', 'browser')[:10]
     )
@@ -1158,6 +1163,7 @@ def url_stats(request, pk):
         'timeline': timeline,
         'referrers': referrers,
         'browsers': browsers,
+        'last_clicked_at': last_clicked_at,
         'recent_events': recent_events,
     }
     return render(request, 'common/url_stats.html', context)

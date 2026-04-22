@@ -59,8 +59,7 @@
 
     <section class="stats-layout">
         <div class="card">
-            <div class="section-label">QR code</div>
-            <h2>Share-ready code</h2>
+            <h2>QR code</h2>
             <p>Preview the QR code here for quick sharing or scanning without an extra click.</p>
             <div class="qr-preview-shell">
                 <img
@@ -73,18 +72,19 @@
         </div>
 
         <div class="card">
-            <div class="section-label">Details</div>
             <h2>Link details</h2>
             <p class="stats-detail-text"><strong>Short URL</strong> {{ surl.short_url }}</p>
             <p class="stats-detail-text"><strong>Destination</strong> <a class="link-inline" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></p>
             <p class="stats-detail-text"><strong>Note</strong> {{ surl.note|default:"-" }}</p>
+            <p class="stats-detail-text"><strong>Created</strong> {% if surl.created_at %}{{ surl.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</p>
+            <p class="stats-detail-text"><strong>Updated</strong> {% if surl.updated_at %}{{ surl.updated_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</p>
+            <p class="stats-detail-text"><strong>Last click</strong> {% if last_clicked_at %}{{ last_clicked_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</p>
         </div>
     </section>
 
     <section class="card">
-        <div class="section-label">Last 14 days</div>
         <h2>Daily clicks</h2>
-        <p class="desktop-timeline-copy">The chart below uses stored click events, so it reflects detailed tracking rather than only the running total.</p>
+        <p class="desktop-timeline-copy">The chart below shows the last 14 days of stored click events rather than only the running total.</p>
         <div class="timeline-chart">
             <div class="timeline-line-shell">
                 <svg class="timeline-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -119,8 +119,7 @@
 
     <section class="stats-layout">
         <div class="card">
-            <div class="section-label">Referrers</div>
-            <h2>Top sources</h2>
+            <h2>Traffic sources</h2>
             <div class="mini-list">
                 {% for item in referrers %}
                 <div class="mini-list-item">
@@ -136,8 +135,7 @@
         </div>
 
         <div class="card">
-            <div class="section-label">Browsers</div>
-            <h2>Client mix</h2>
+            <h2>Browsers</h2>
             <div class="mini-list">
                 {% for item in browsers %}
                 <div class="mini-list-item">
@@ -154,8 +152,7 @@
     </section>
 
     <section class="card">
-        <div class="section-label">Recent activity</div>
-        <h2>Latest clicks</h2>
+        <h2>Recent activity</h2>
         <div class="table-scroll stats-table-shell">
             <table class="data-table stats-table">
                 <thead>
