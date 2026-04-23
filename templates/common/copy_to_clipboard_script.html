@@ -1,0 +1,44 @@
+<script>
+    (function () {
+        var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-copy-text]'));
+        if (!buttons.length) {
+            return;
+        }
+
+        function setCopied(button) {
+            var originalText = button.getAttribute('data-original-label') || button.textContent;
+            button.setAttribute('data-original-label', originalText);
+            button.textContent = 'Copied';
+            window.setTimeout(function () {
+                button.textContent = originalText;
+            }, 1400);
+        }
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var text = button.getAttribute('data-copy-text') || '';
+                if (!text) {
+                    return;
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(function () {
+                        setCopied(button);
+                    });
+                    return;
+                }
+
+                var input = document.createElement('textarea');
+                input.value = text;
+                input.setAttribute('readonly', 'readonly');
+                input.style.position = 'fixed';
+                input.style.left = '-9999px';
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                setCopied(button);
+            });
+        });
+    }());
+</script>

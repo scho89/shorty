@@ -532,6 +532,9 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, 'campaign launch')
         self.assertContains(response, 'news.example.com')
         self.assertContains(response, 'Chrome')
+        self.assertContains(response, 'Created')
+        self.assertContains(response, 'Updated')
+        self.assertContains(response, 'Last click')
 
     def test_qr_code_view_returns_svg(self):
         self.client.force_login(self.owner)
@@ -550,6 +553,46 @@ class UrlInsightsViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse('common:url_qr_code', kwargs={'pk': self.surl.pk}))
         self.assertContains(response, 'alt="QR code for')
+        self.assertContains(response, 'Copy short URL')
+        self.assertContains(response, '?download=1')
+
+    def test_stats_view_shows_dash_for_missing_metadata(self):
+        self.client.force_login(self.owner)
+        self.surl.click_events.all().delete()
+        Surl.objects.filter(pk=self.surl.pk).update(created_at=None, updated_at=None)
+
+        response = self.client.get(reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<strong>Created</strong> -', html=True)
+        self.assertContains(response, '<strong>Updated</strong> -', html=True)
+        self.assertContains(response, '<strong>Last click</strong> -', html=True)
+
+    def test_stats_period_filter_limits_breakdowns(self):
+        old_event = ClickEvent.objects.create(surl=self.surl, referrer='old.example.com/story', browser='Firefox')
+        ClickEvent.objects.filter(pk=old_event.pk).update(created_at=timezone.now() - timedelta(days=20))
+        self.client.force_login(self.owner)
+
+        response = self.client.get(f"{reverse('common:url_stats', kwargs={'pk': self.surl.pk})}?days=7")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '7 day view')
+        self.assertContains(response, 'news.example.com')
+        self.assertNotContains(response, 'old.example.com')
+
+    def test_stats_csv_export_uses_selected_period(self):
+        old_event = ClickEvent.objects.create(surl=self.surl, referrer='old.example.com/story', browser='Firefox')
+        ClickEvent.objects.filter(pk=old_event.pk).update(created_at=timezone.now() - timedelta(days=20))
+        self.client.force_login(self.owner)
+
+        response = self.client.get(f"{reverse('common:url_stats_csv_export', kwargs={'pk': self.surl.pk})}?days=7")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8')
+        content = response.content.decode('utf-8-sig')
+        self.assertIn('Created at,Browser,Referrer', content)
+        self.assertIn('Chrome', content)
+        self.assertNotIn('old.example.com', content)
 
     def test_stats_toggle_active_updates_link_state(self):
         self.client.force_login(self.owner)
@@ -618,6 +661,40 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
         self.assertContains(response, 'data-open-global-quick-create')
 
+    def test_links_csv_export_respects_filters(self):
+        other_surl = Surl.objects.create(
+            alias='other',
+            url='https://example.org/other',
+            note='secondary',
+            domain=self.domain,
+            short_url='stats.example.com/other',
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(f"{reverse('common:links_csv_export')}?q=launch")
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8-sig')
+        self.assertIn(self.surl.short_url, content)
+        self.assertNotIn(other_surl.short_url, content)
+
+    def test_bulk_action_disables_selected_owned_links(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('common:url_bulk_action'),
+            {
+                'bulk_action': 'disable',
+                'selected_links': [str(self.surl.pk)],
+                'next': reverse('common:links'),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.surl.refresh_from_db()
+        self.assertFalse(self.surl.is_active)
+
 
 @override_settings(
     ALLOWED_HOSTS=['testserver', '127.0.0.1', 'localhost'],
@@ -663,6 +740,22 @@ class QuickCreateTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'id="quick-note"')
+
+    def test_dashboard_quick_create_only_lists_verified_domains(self):
+        unverified_domain = Domain.objects.create(
+            name='pending-quick.example.com',
+            owner=self.owner,
+            is_verified=False,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('common:url'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.domain.name)
+        self.assertNotContains(response, f'<option value="{unverified_domain.pk}">pending-quick.example.com</option>', html=False)
+        self.assertContains(response, '<span>Verified domains</span>', html=True)
+        self.assertContains(response, '<strong>1</strong>', html=True)
 
     def test_links_create_generates_alias_when_blank(self):
         self.client.force_login(self.owner)
@@ -755,7 +848,7 @@ class AuthRecaptchaTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'host name with page path')
-        self.assertContains(response, 'retained for 14 days')
+        self.assertContains(response, 'retained for 30 days')
 
     @override_settings(DEBUG=True, RECAPTCHA_SITE_KEY='', RECAPTCHA_SECRET='')
     def test_login_allows_debug_flow_without_recaptcha(self):

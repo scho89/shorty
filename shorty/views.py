@@ -10,7 +10,6 @@ from shorty.models import ClickEvent, Domain, FallbackDestination, GlobalRouting
 import logging
 
 logger = logging.getLogger('shorty')
-CLICK_EVENT_RETENTION_DAYS = getattr(settings, 'CLICK_EVENT_RETENTION_DAYS', 14)
 CLICK_EVENT_CLEANUP_CACHE_KEY = 'shorty:click-event-cleanup'
 
 
@@ -54,13 +53,14 @@ def normalize_referrer_path(referrer):
 
 
 def cleanup_expired_click_events():
-    if CLICK_EVENT_RETENTION_DAYS <= 0:
+    retention_days = getattr(settings, 'CLICK_EVENT_RETENTION_DAYS', 30)
+    if retention_days <= 0:
         return
 
     if not cache.add(CLICK_EVENT_CLEANUP_CACHE_KEY, '1', timeout=3600):
         return
 
-    cutoff = timezone.now() - timezone.timedelta(days=CLICK_EVENT_RETENTION_DAYS)
+    cutoff = timezone.now() - timezone.timedelta(days=retention_days)
     ClickEvent.objects.filter(created_at__lt=cutoff).delete()
 
 DEFAULT_ERROR_MESSAGES = {

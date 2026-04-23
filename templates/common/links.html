@@ -27,7 +27,7 @@
             <p>Current list after applying any domain filter.</p>
         </div>
         <div class="stat-card">
-            <strong>{{ domains|length }}</strong>
+            <strong>{{ link_creation_domains|length }}</strong>
             <span>Verified domains</span>
             <p>Domains available for new short links.</p>
         </div>
@@ -73,14 +73,38 @@
                             </div>
                             <div class="library-toolbar">
                                 <div class="table-meta">{{ surls|length }} total</div>
-                                <button class="button-secondary library-filter-button" type="submit">Apply filters</button>
+                                <div class="library-toolbar-actions">
+                                    <a class="button-secondary library-filter-button" href="{% url 'common:links_csv_export' %}?q={{ search_query|urlencode }}&domain={{ selected_domain_id|urlencode }}">Export CSV</a>
+                                    <button class="button-secondary library-filter-button" type="submit">Apply filters</button>
+                                </div>
                             </div>
                         </form>
                     </div>
+                    <form method="post" action="{% url 'common:url_bulk_action' %}" class="bulk-action-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <div class="bulk-toolbar" data-bulk-toolbar hidden>
+                            <div class="bulk-toolbar-copy">
+                                <strong><span data-bulk-count>0</span> selected</strong>
+                                <span>Apply a bulk action to the checked links.</span>
+                            </div>
+                            <label class="checkbox-field bulk-select-all">
+                                <input type="checkbox" data-bulk-select-all>
+                                <span>Select all visible links</span>
+                            </label>
+                            <select class="select bulk-action-select" name="bulk_action" aria-label="Bulk action">
+                                <option value="">Choose action</option>
+                                <option value="enable">Enable selected</option>
+                                <option value="disable">Disable selected</option>
+                                <option value="delete">Delete selected</option>
+                            </select>
+                            <button class="button-secondary" type="submit" onclick="return confirm('Apply this action to the selected links?');">Apply</button>
+                        </div>
                     <div class="table-scroll links-table-shell">
                         <table class="data-table links-data-table">
                             <thead>
                                 <tr>
+                                    <th>Select</th>
                                     <th>Short URL</th>
                                     <th>Destination</th>
                                     <th>Status</th>
@@ -91,6 +115,9 @@
                             <tbody>
                             {% for surl in surls %}
                                 <tr class="clickable-row" data-href="{% url 'common:url_stats' pk=surl.id %}" tabindex="0">
+                                    <td>
+                                        <input type="checkbox" name="selected_links" value="{{ surl.id }}" aria-label="Select {{ surl.short_url }}" data-bulk-checkbox>
+                                    </td>
                                     <td>
                                         <div class="library-primary-cell">
                                             <span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span>
@@ -108,7 +135,7 @@
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="5">
+                                    <td colspan="6">
                                         <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
                                     </td>
                                 </tr>
@@ -118,9 +145,12 @@
                     </div>
                     <div class="link-card-list">
                         {% for surl in surls %}
-                        <a class="link-library-card" href="{% url 'common:url_stats' pk=surl.id %}">
+                        <div class="link-library-card">
                             <div class="link-library-card-top">
-                                <span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span>
+                                <label class="checkbox-field link-card-checkbox">
+                                    <input type="checkbox" name="selected_links" value="{{ surl.id }}" aria-label="Select {{ surl.short_url }}" data-bulk-checkbox>
+                                    <span class="chip domain-chip" style="{{ surl.domain_badge_style }}">{{ surl.short_url }}</span>
+                                </label>
                                 <span class="status-chip {{ surl.status_tone }}">{{ surl.status_label }}</span>
                             </div>
                             <div class="link-library-card-body">
@@ -131,11 +161,16 @@
                                 <span>{{ surl.visit_counts }} visits</span>
                                 <span>{% if surl.expires_at %}Expires {{ surl.expires_at|date:"Y-m-d" }}{% else %}No expiry{% endif %}</span>
                             </div>
-                        </a>
+                            <div class="button-row">
+                                <a class="button-secondary" href="{% url 'common:url_stats' pk=surl.id %}">Open details</a>
+                                <button class="button-secondary" type="button" data-copy-text="https://{{ surl.short_url }}">Copy</button>
+                            </div>
+                        </div>
                         {% empty %}
                         <div class="empty-card">No short links yet. Start with a verified domain and create your first alias.</div>
                         {% endfor %}
                     </div>
+                    </form>
                 </div>
             </section>
 
@@ -156,4 +191,6 @@
     {% include 'common/clear_input_script.html' %}
     {% include 'common/toggle_card_script.html' %}
     {% include 'common/clickable_row_script.html' %}
+    {% include 'common/copy_to_clipboard_script.html' %}
+    {% include 'common/bulk_actions_script.html' %}
 {% endblock %}

@@ -13,11 +13,17 @@
         }
 
         rows.forEach(function (row) {
-            row.addEventListener('click', function () {
+            row.addEventListener('click', function (event) {
+                if (event.target.closest('a, button, input, select, textarea, label')) {
+                    return;
+                }
                 navigate(row);
             });
 
             row.addEventListener('keydown', function (event) {
+                if (event.target.closest('a, button, input, select, textarea, label')) {
+                    return;
+                }
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     navigate(row);

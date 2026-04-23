@@ -1,0 +1,36 @@
+<script>
+    (function () {
+        var selectAll = document.querySelector('[data-bulk-select-all]');
+        var checkboxes = Array.prototype.slice.call(document.querySelectorAll('[data-bulk-checkbox]'));
+        var toolbar = document.querySelector('[data-bulk-toolbar]');
+        var countLabel = document.querySelector('[data-bulk-count]');
+        if (!selectAll || !checkboxes.length || !toolbar || !countLabel) {
+            return;
+        }
+
+        function syncState() {
+            var checkedCount = checkboxes.filter(function (item) {
+                return item.checked;
+            }).length;
+            countLabel.textContent = String(checkedCount);
+            toolbar.hidden = checkedCount === 0;
+            selectAll.checked = checkedCount === checkboxes.length;
+            selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+        }
+
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = selectAll.checked;
+            });
+            syncState();
+        });
+
+        checkboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                syncState();
+            });
+        });
+
+        syncState();
+    }());
+</script>

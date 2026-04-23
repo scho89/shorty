@@ -185,6 +185,8 @@ class Surl(models.Model):
             "unique": "That short URL already exists. Check the domain and alias.",
         },)
     visit_counts = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     class Meta:
         indexes = [
