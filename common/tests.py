@@ -639,6 +639,7 @@ class UrlInsightsViewsTests(TestCase):
         self.assertContains(response, reverse('common:url_stats', kwargs={'pk': self.surl.pk}))
         self.assertContains(response, 'data-tab-target="links-library"')
         self.assertContains(response, 'data-tab-target="links-create"')
+        self.assertContains(response, 'data-bulk-toolbar')
 
     def test_edit_page_hides_tabs_and_shows_form_only(self):
         self.client.force_login(self.owner)

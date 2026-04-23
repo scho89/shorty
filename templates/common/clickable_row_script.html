@@ -12,9 +12,22 @@
             }
         }
 
+        function toggleRowSelection(row) {
+            var checkbox = row.querySelector('[data-bulk-checkbox]');
+            if (!checkbox || checkbox.disabled) {
+                return;
+            }
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
         rows.forEach(function (row) {
             row.addEventListener('click', function (event) {
                 if (event.target.closest('a, button, input, select, textarea, label')) {
+                    return;
+                }
+                if (row.closest('[data-select-mode="true"]')) {
+                    toggleRowSelection(row);
                     return;
                 }
                 navigate(row);
@@ -26,6 +39,10 @@
                 }
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
+                    if (row.closest('[data-select-mode="true"]')) {
+                        toggleRowSelection(row);
+                        return;
+                    }
                     navigate(row);
                 }
             });

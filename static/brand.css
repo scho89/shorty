@@ -1227,6 +1227,11 @@ select {
     font-size: 0.88rem;
 }
 
+.table-card[data-select-mode="true"] .links-data-table thead th:first-child,
+.table-card[data-select-mode="true"] .links-data-table tbody td:first-child {
+    background: rgba(37, 99, 235, 0.03);
+}
+
 .bulk-select-all {
     margin: 0;
 }
@@ -1641,9 +1646,22 @@ select {
     transition: background 0.18s ease, box-shadow 0.18s ease;
 }
 
+.table-card[data-select-mode="true"] .clickable-row {
+    cursor: cell;
+}
+
 .clickable-row:hover,
 .clickable-row:focus-visible {
     background: rgba(37, 99, 235, 0.04);
+}
+
+.table-card[data-select-mode="true"] .clickable-row:hover,
+.table-card[data-select-mode="true"] .clickable-row:focus-visible {
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.table-card[data-select-mode="true"] .clickable-row.is-selected {
+    background: rgba(37, 99, 235, 0.12);
 }
 
 .clickable-row:focus-visible {
@@ -1716,6 +1734,10 @@ select {
 
 .link-library-card:hover {
     background: rgba(37, 99, 235, 0.04);
+}
+
+.link-library-card.is-selected {
+    background: rgba(37, 99, 235, 0.08);
 }
 
 .word-cloud-card {
