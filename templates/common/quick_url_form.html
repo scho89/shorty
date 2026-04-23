@@ -2,5 +2,5 @@
     <div class="section-label">Quick create</div>
     <h2>Create a link fast</h2>
     <p>Start with the destination and domain. Leave alias blank to generate one automatically, then manage the rest from the detail page.</p>
-    {% include 'common/quick_create_form.html' with form=dashboard_form domains=domains mode='quick' id_prefix='quick' error_id='quick-create-errors' generic_error=e.messages.0|default:'' generic_error_id='quick-create-errors-generic' submit_label='Create and open details' show_close_button=False %}
+    {% include 'common/quick_create_form.html' with form=dashboard_form domains=link_creation_domains mode='quick' id_prefix='quick' error_id='quick-create-errors' generic_error=e.messages.0|default:'' generic_error_id='quick-create-errors-generic' submit_label='Create and open details' show_close_button=False %}
 </div>

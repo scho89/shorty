@@ -98,6 +98,7 @@ class RedirectTests(TestCase):
 
     @override_settings(CLICK_EVENT_RETENTION_DAYS=14)
     def test_redirect_cleans_up_old_click_events(self):
+        cache.clear()
         owner = User.objects.create_user(username='cleanup-owner', password='pw12345!')
         domain = Domain.objects.create(name='cleanup.example.com', owner=owner, is_verified=True)
         surl = Surl.objects.create(

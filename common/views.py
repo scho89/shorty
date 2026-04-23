@@ -31,6 +31,7 @@ from shorty.forms import DomainForm, DomainRoutingSettingsForm, FallbackDestinat
 from shorty.models import ClickEvent, Domain, FallbackDestination, GlobalRoutingSettings, Surl
 
 import json
+import csv
 import logging
 import secrets
 import sys
@@ -44,6 +45,7 @@ from urllib.error import URLError
 logger=logging.getLogger('shorty')
 SSL_LIST = getattr(settings, 'SSL_LIST', '')
 ALIAS_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
+STATS_PERIOD_OPTIONS = (7, 14, 30)
 DOMAIN_BADGE_PALETTE = [
     ('#eff6ff', '#1d4ed8'),
     ('#ecfdf3', '#138a52'),
@@ -182,6 +184,7 @@ def get_recaptcha_context():
         'recaptcha_enabled': bool(settings.RECAPTCHA_SITE_KEY) and not recaptcha_is_bypassed(),
         'recaptcha_site_key': settings.RECAPTCHA_SITE_KEY,
         'recaptcha_bypassed': recaptcha_is_bypassed(),
+        'click_event_retention_days': settings.CLICK_EVENT_RETENTION_DAYS,
     }
 
 
@@ -808,6 +811,76 @@ def links(request):
 
     return redirect('common:links')
 
+
+def get_filtered_owned_surls(request):
+    domains, surls = get_owned_objects(request)
+    selected_domain_id = (request.GET.get('domain') or '').strip()
+    search_query = (request.GET.get('q') or '').strip()
+    if selected_domain_id:
+        surls = surls.filter(domain_id=selected_domain_id)
+    if search_query:
+        surls = surls.filter(
+            Q(alias__icontains=search_query)
+            | Q(url__icontains=search_query)
+            | Q(note__icontains=search_query)
+            | Q(short_url__icontains=search_query)
+            | Q(domain__name__icontains=search_query)
+        )
+    return domains, surls.order_by('-visit_counts'), selected_domain_id, search_query
+
+
+@login_required(login_url='common:login')
+def links_csv_export(request):
+    _, surls, _, _ = get_filtered_owned_surls(request)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="shorty-links.csv"'
+    response.write('\ufeff')
+    writer = csv.writer(response)
+    writer.writerow(['Short URL', 'Destination URL', 'Domain', 'Alias', 'Status', 'Visits', 'Expires at', 'Note'])
+    for surl in surls.select_related('domain'):
+        status_label, _ = get_surl_status_display(surl)
+        writer.writerow([
+            surl.short_url,
+            surl.url,
+            surl.domain.name,
+            surl.alias,
+            status_label,
+            surl.visit_counts,
+            timezone.localtime(surl.expires_at).strftime('%Y-%m-%d %H:%M:%S') if surl.expires_at else '',
+            surl.note,
+        ])
+    return response
+
+
+@login_required(login_url='common:login')
+@require_POST
+def url_bulk_action(request):
+    action = (request.POST.get('bulk_action') or '').strip()
+    selected_ids = request.POST.getlist('selected_links')
+    redirect_target = request.POST.get('next') or reverse('common:links')
+    if not redirect_target.startswith('/'):
+        redirect_target = reverse('common:links')
+
+    surls = Surl.objects.filter(pk__in=selected_ids, domain__owner=request.user)
+    count = surls.count()
+    if not count:
+        messages.error(request, 'Select at least one link to update.')
+        return redirect(redirect_target)
+
+    if action == 'enable':
+        surls.update(is_active=True)
+        messages.success(request, f'Enabled {count} selected link(s).')
+    elif action == 'disable':
+        surls.update(is_active=False)
+        messages.success(request, f'Disabled {count} selected link(s).')
+    elif action == 'delete':
+        surls.delete()
+        messages.success(request, f'Deleted {count} selected link(s).')
+    else:
+        messages.error(request, 'Choose a bulk action to apply.')
+
+    return redirect(redirect_target)
+
 @login_required(login_url='common:login')
 @require_POST
 def url_create(request):
@@ -898,6 +971,7 @@ def get_owned_surl(request, pk):
 def build_url_context(domains, surls, dashboard_form=None, link_form=None, selected_domain_id='', search_query='', **extra):
     domains = list(domains)
     surls = list(surls)
+    link_creation_domains = [domain for domain in domains if domain.is_verified]
     domain_badge_styles = get_domain_badge_styles(domains)
 
     for surl in surls:
@@ -912,6 +986,7 @@ def build_url_context(domains, surls, dashboard_form=None, link_form=None, selec
     context = {
         'surls': surls,
         'domains': domains,
+        'link_creation_domains': link_creation_domains,
         'dashboard_form': dashboard_form,
         'link_form': link_form,
         'wc_data': insights['traffic_items'],
@@ -1078,6 +1153,17 @@ def build_traffic_items(top_links, rising_links, domain_trends):
     return items[:12]
 
 
+def get_stats_period(request):
+    raw_days = (request.GET.get('days') or '').strip()
+    if raw_days.isdigit() and int(raw_days) in STATS_PERIOD_OPTIONS:
+        return int(raw_days)
+    return 14
+
+
+def get_stats_since(days):
+    return timezone.now() - timedelta(days=days)
+
+
 def build_stats_timeline(surl, days=14):
     today = timezone.localdate()
     start_day = today - timedelta(days=days - 1)
@@ -1126,9 +1212,12 @@ def build_stats_timeline(surl, days=14):
     }
 
 
-def build_top_breakdown(surl, field_name, empty_label):
+def build_top_breakdown(surl, field_name, empty_label, since=None):
+    queryset = ClickEvent.objects.filter(surl=surl)
+    if since is not None:
+        queryset = queryset.filter(created_at__gte=since)
     rows = (
-        ClickEvent.objects.filter(surl=surl)
+        queryset
         .values(field_name)
         .annotate(total=Count('id'))
         .order_by('-total', field_name)[:5]
@@ -1146,16 +1235,19 @@ def build_top_breakdown(surl, field_name, empty_label):
 @login_required(login_url='common:login')
 def url_stats(request, pk):
     surl = get_owned_surl(request, pk)
-    timeline = build_stats_timeline(surl)
-    referrers = build_top_breakdown(surl, 'referrer', 'Direct / Unknown')
-    browsers = build_top_breakdown(surl, 'browser', 'Unknown')
+    selected_days = get_stats_period(request)
+    since = get_stats_since(selected_days)
+    timeline = build_stats_timeline(surl, days=selected_days)
+    referrers = build_top_breakdown(surl, 'referrer', 'Direct / Unknown', since=since)
+    browsers = build_top_breakdown(surl, 'browser', 'Unknown', since=since)
+    period_clicks = ClickEvent.objects.filter(surl=surl, created_at__gte=since).count()
     last_clicked_at = (
         surl.click_events.order_by('-created_at')
         .values_list('created_at', flat=True)
         .first()
     )
     recent_events = list(
-        surl.click_events.order_by('-created_at').values('created_at', 'referrer', 'browser')[:10]
+        surl.click_events.filter(created_at__gte=since).order_by('-created_at').values('created_at', 'referrer', 'browser')[:10]
     )
 
     context = {
@@ -1163,10 +1255,34 @@ def url_stats(request, pk):
         'timeline': timeline,
         'referrers': referrers,
         'browsers': browsers,
-        'last_clicked_at': last_clicked_at,
         'recent_events': recent_events,
+        'last_clicked_at': last_clicked_at,
+        'period_clicks': period_clicks,
+        'selected_days': selected_days,
+        'stats_period_options': STATS_PERIOD_OPTIONS,
     }
     return render(request, 'common/url_stats.html', context)
+
+
+@login_required(login_url='common:login')
+def url_stats_csv_export(request, pk):
+    surl = get_owned_surl(request, pk)
+    selected_days = get_stats_period(request)
+    since = get_stats_since(selected_days)
+    events = surl.click_events.filter(created_at__gte=since).order_by('-created_at')
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="shorty-{surl.alias}-{selected_days}d-clicks.csv"'
+    response.write('\ufeff')
+    writer = csv.writer(response)
+    writer.writerow(['Created at', 'Browser', 'Referrer'])
+    for event in events:
+        writer.writerow([
+            timezone.localtime(event.created_at).strftime('%Y-%m-%d %H:%M:%S'),
+            event.browser or 'Unknown',
+            event.referrer or 'Direct / Unknown',
+        ])
+    return response
 
 
 @login_required(login_url='common:login')
@@ -1187,7 +1303,8 @@ def url_qr_code(request, pk):
         border=2,
     )
     response = HttpResponse(content_type='image/svg+xml')
-    response['Content-Disposition'] = f'inline; filename="shorty-{surl.alias}-qr.svg"'
+    disposition = 'attachment' if request.GET.get('download') == '1' else 'inline'
+    response['Content-Disposition'] = f'{disposition}; filename="shorty-{surl.alias}-qr.svg"'
     qr.save(response)
     return response
 

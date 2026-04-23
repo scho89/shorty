@@ -11,6 +11,7 @@
         <div class="button-row">
             <a class="button-secondary" href="{% url 'common:links' %}">Back to links</a>
             <a class="button-secondary" href="{% url 'common:url_edit' pk=surl.id %}">Edit link</a>
+            <button class="button-secondary" type="button" data-copy-text="https://{{ surl.short_url }}">Copy short URL</button>
             <a class="button-secondary" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">Open destination</a>
             <form class="inline-action-form" method="post" action="{% url 'common:url_delete' pk=surl.id %}">
                 {% csrf_token %}
@@ -59,19 +60,21 @@
 
     <section class="stats-layout">
         <div class="card">
-            <h2>QR code</h2>
-            <p>Preview the QR code here for quick sharing or scanning without an extra click.</p>
-            <div class="qr-preview-shell">
+            <div class="section-label">QR code</div>
+            <h2>Share-ready code</h2>
+            <p>Click the QR code itself to download the SVG for quick sharing or print use.</p>
+            <a class="qr-preview-shell qr-preview-link" href="{% url 'common:url_qr_code' pk=surl.id %}?download=1" download>
                 <img
                     src="{% url 'common:url_qr_code' pk=surl.id %}"
                     alt="QR code for {{ surl.short_url }}"
                     class="qr-preview"
                     loading="lazy"
                 >
-            </div>
+            </a>
         </div>
 
         <div class="card">
+            <div class="section-label">Details</div>
             <h2>Link details</h2>
             <p class="stats-detail-text"><strong>Short URL</strong> {{ surl.short_url }}</p>
             <p class="stats-detail-text"><strong>Destination</strong> <a class="link-inline" href="{{ surl.url }}" target="_blank" rel="noopener noreferrer">{{ surl.url }}</a></p>
@@ -82,9 +85,24 @@
         </div>
     </section>
 
+    <section class="card stats-filter-card stats-anchor-section" id="stats-range">
+        <div>
+            <div class="section-label">Stats range</div>
+            <h2>{{ selected_days }} day view</h2>
+            <p>Timeline, referrers, browsers, and recent activity are filtered to the selected retention window.</p>
+        </div>
+        <div class="period-filter-form">
+            {% for days in stats_period_options %}
+            <a class="{% if days == selected_days %}button{% else %}button-secondary{% endif %}" href="{% url 'common:url_stats' pk=surl.id %}?days={{ days }}#stats-range">{{ days }} days</a>
+            {% endfor %}
+            <a class="button-secondary" href="{% url 'common:url_stats_csv_export' pk=surl.id %}?days={{ selected_days }}">Export CSV</a>
+        </div>
+    </section>
+
     <section class="card">
+        <div class="section-label">Last {{ selected_days }} days</div>
         <h2>Daily clicks</h2>
-        <p class="desktop-timeline-copy">The chart below shows the last 14 days of stored click events rather than only the running total.</p>
+        <p class="desktop-timeline-copy">The chart below uses stored click events. This range has {{ period_clicks }} recorded click(s).</p>
         <div class="timeline-chart">
             <div class="timeline-line-shell">
                 <svg class="timeline-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -119,7 +137,8 @@
 
     <section class="stats-layout">
         <div class="card">
-            <h2>Traffic sources</h2>
+            <div class="section-label">Referrers</div>
+            <h2>Top sources</h2>
             <div class="mini-list">
                 {% for item in referrers %}
                 <div class="mini-list-item">
@@ -135,7 +154,8 @@
         </div>
 
         <div class="card">
-            <h2>Browsers</h2>
+            <div class="section-label">Browsers</div>
+            <h2>Client mix</h2>
             <div class="mini-list">
                 {% for item in browsers %}
                 <div class="mini-list-item">
@@ -152,7 +172,8 @@
     </section>
 
     <section class="card">
-        <h2>Recent activity</h2>
+        <div class="section-label">Recent activity</div>
+        <h2>Latest clicks</h2>
         <div class="table-scroll stats-table-shell">
             <table class="data-table stats-table">
                 <thead>
@@ -195,4 +216,5 @@
 {% block script %}
     {{ block.super }}
     {% include 'common/toggle_card_script.html' %}
+    {% include 'common/copy_to_clipboard_script.html' %}
 {% endblock %}
