@@ -46,7 +46,7 @@
 
         <div class="tabs-content">
             <section class="tab-panel{% if not "/_common_/url/edit/" in request.path %} is-active{% endif %}" id="links-library" data-tab-panel role="tabpanel">
-                <div class="table-card">
+                <div class="table-card" data-links-select-root>
                     <div class="table-header">
                         <div class="table-header-copy">
                             <div class="section-label">Library</div>
@@ -86,7 +86,7 @@
                         <div class="bulk-toolbar" data-bulk-toolbar hidden>
                             <div class="bulk-toolbar-copy">
                                 <strong><span data-bulk-count>0</span> selected</strong>
-                                <span>Apply a bulk action to the checked links.</span>
+                                <span>While select mode is on, clicking a row will select it instead of opening details.</span>
                             </div>
                             <label class="checkbox-field bulk-select-all">
                                 <input type="checkbox" data-bulk-select-all>

@@ -1,21 +1,46 @@
 <script>
     (function () {
+        var root = document.querySelector('[data-links-select-root]');
         var selectAll = document.querySelector('[data-bulk-select-all]');
         var checkboxes = Array.prototype.slice.call(document.querySelectorAll('[data-bulk-checkbox]'));
         var toolbar = document.querySelector('[data-bulk-toolbar]');
         var countLabel = document.querySelector('[data-bulk-count]');
-        if (!selectAll || !checkboxes.length || !toolbar || !countLabel) {
+        if (!root || !selectAll || !checkboxes.length || !toolbar || !countLabel) {
             return;
+        }
+
+        function setSelectMode(isActive) {
+            root.setAttribute('data-select-mode', isActive ? 'true' : 'false');
+        }
+
+        function clearSelection() {
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = false;
+            });
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
         }
 
         function syncState() {
             var checkedCount = checkboxes.filter(function (item) {
                 return item.checked;
             }).length;
+            setSelectMode(checkedCount > 0);
             countLabel.textContent = String(checkedCount);
             toolbar.hidden = checkedCount === 0;
             selectAll.checked = checkedCount === checkboxes.length;
             selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+
+            checkboxes.forEach(function (checkbox) {
+                var row = checkbox.closest('.clickable-row');
+                var card = checkbox.closest('.link-library-card');
+                if (row) {
+                    row.classList.toggle('is-selected', checkbox.checked);
+                }
+                if (card) {
+                    card.classList.toggle('is-selected', checkbox.checked);
+                }
+            });
         }
 
         selectAll.addEventListener('change', function () {
@@ -31,6 +56,7 @@
             });
         });
 
+        clearSelection();
         syncState();
     }());
 </script>
