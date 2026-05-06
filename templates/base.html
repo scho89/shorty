@@ -14,7 +14,9 @@
     <div class="site-shell">
         {% include "navbar.html" %}
         {% include "message.html" %}
-        {% block content %}{% endblock %}
+        <main class="site-main">
+            {% block content %}{% endblock %}
+        </main>
     </div>
     {% include "common/global_quick_create.html" %}
     <script>
