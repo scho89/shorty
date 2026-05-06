@@ -30,7 +30,7 @@
                     </span>
                 </span>
             </div>
-            <a class="nav-menu-item" href="{% url 'common:url' %}">Dashboard</a>
+            <a class="nav-menu-item" href="{% url 'common:url' %}">Overview</a>
             <a class="nav-menu-item" href="{% url 'common:links' %}">Links</a>
             <a class="nav-menu-item" href="{% url 'common:domain_list' %}">Domains</a>
             <a class="nav-menu-item" href="{% url 'common:settings' %}">Settings</a>
@@ -48,7 +48,7 @@
     </details>
     <div class="site-nav-links">
         {% if user.is_authenticated %}
-        <a class="site-nav-link" href="{% url 'common:url' %}">Dashboard</a>
+        <a class="site-nav-link" href="{% url 'common:url' %}">Overview</a>
         <a class="site-nav-link" href="{% url 'common:links' %}">Links</a>
         <a class="site-nav-link" href="{% url 'common:domain_list' %}">Domains</a>
         <a class="site-nav-link" href="{% url 'common:settings' %}">Settings</a>
