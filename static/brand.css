@@ -58,19 +58,39 @@ select {
 }
 
 .site-shell {
+    width: 100%;
+    margin: 0;
+    padding: 0 0 72px;
+}
+
+.site-main,
+.flash-stack {
     width: min(var(--content-width), calc(100% - 48px));
     margin: 0 auto;
-    padding: 28px 0 72px;
+}
+
+.site-main {
+    padding-top: 28px;
 }
 
 .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding: 18px 22px;
-    border: 1px solid rgba(219, 229, 240, 0.9);
-    border-radius: 20px;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 18px 24px;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 1px solid rgba(219, 229, 240, 0.9);
+    border-left: 0;
+    border-radius: 0;
     background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(10px);
     box-shadow: var(--shadow-md);
@@ -2751,15 +2771,19 @@ select {
 
 @media (max-width: 680px) {
     .site-shell {
-        width: min(var(--content-width), calc(100% - 28px));
-        padding-top: 20px;
+        padding-bottom: 72px;
+    }
+
+    .site-main,
+    .flash-stack {
+        width: calc(100% - 28px);
     }
 
     .site-nav {
         align-items: center;
         flex-direction: row;
         justify-content: space-between;
-        padding: 16px;
+        padding: 16px 14px;
     }
 
     .site-nav-links {
@@ -2769,6 +2793,7 @@ select {
     .nav-menu-mobile {
         display: inline-block;
         flex: 0 0 auto;
+        margin-left: auto;
     }
 
     .nav-menu {
@@ -2781,8 +2806,10 @@ select {
     }
 
     .nav-menu-mobile-toggle {
+        display: inline-flex;
         width: auto;
         justify-content: center;
+        white-space: nowrap;
     }
 
     .nav-menu-toggle {
