@@ -65,8 +65,10 @@ select {
 
 .site-main,
 .flash-stack {
-    width: min(var(--content-width), calc(100% - 48px));
+    width: min(var(--content-width), 100%);
     margin: 0 auto;
+    padding-left: 24px;
+    padding-right: 24px;
 }
 
 .site-main {
@@ -2776,7 +2778,8 @@ select {
 
     .site-main,
     .flash-stack {
-        width: calc(100% - 28px);
+        padding-left: 14px;
+        padding-right: 14px;
     }
 
     .site-nav {
